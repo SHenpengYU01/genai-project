@@ -125,6 +125,7 @@
             "TemperatureSensorInput": 30.0,
             "SetTemperature": 50.0
           },
+          "repeat": 5,
           "expect": {
             "HeaterOutput": true,
             "OverheatProtection": false
@@ -135,36 +136,7 @@
             "TemperatureSensorInput": 30.0,
             "SetTemperature": 50.0
           },
-          "expect": {
-            "HeaterOutput": true,
-            "OverheatProtection": false
-          }
-        },
-        {
-          "inputs": {
-            "TemperatureSensorInput": 30.0,
-            "SetTemperature": 50.0
-          },
-          "expect": {
-            "HeaterOutput": true,
-            "OverheatProtection": false
-          }
-        },
-        {
-          "inputs": {
-            "TemperatureSensorInput": 30.0,
-            "SetTemperature": 50.0
-          },
-          "expect": {
-            "HeaterOutput": true,
-            "OverheatProtection": false
-          }
-        },
-        {
-          "inputs": {
-            "TemperatureSensorInput": 30.0,
-            "SetTemperature": 50.0
-          },
+          "repeat": 1,
           "expect": {
             "HeaterOutput": false,
             "OverheatProtection": true
@@ -175,6 +147,7 @@
             "TemperatureSensorInput": 30.0,
             "SetTemperature": 50.0
           },
+          "repeat": 3,
           "expect": {
             "HeaterOutput": false,
             "OverheatProtection": true
@@ -185,16 +158,7 @@
             "TemperatureSensorInput": 30.0,
             "SetTemperature": 50.0
           },
-          "expect": {
-            "HeaterOutput": false,
-            "OverheatProtection": true
-          }
-        },
-        {
-          "inputs": {
-            "TemperatureSensorInput": 30.0,
-            "SetTemperature": 50.0
-          },
+          "repeat": 1,
           "expect": {
             "HeaterOutput": false,
             "OverheatProtection": false
@@ -205,6 +169,7 @@
             "TemperatureSensorInput": 30.0,
             "SetTemperature": 50.0
           },
+          "repeat": 1,
           "expect": {
             "HeaterOutput": true,
             "OverheatProtection": false

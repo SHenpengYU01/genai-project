@@ -52,7 +52,7 @@
   "test_cases": [
     {
       "id": "TC1",
-      "description": "区间分拣",
+      "description": "区间分拣(每次分拣为上升沿)",
       "scan_ms": 10,
       "steps": [
         {
@@ -68,11 +68,29 @@
         {
           "inputs": {
             "height": 15.0,
+            "risingSort": false
+          },
+          "expect": {
+            "sortPulse": false
+          }
+        },
+        {
+          "inputs": {
+            "height": 15.0,
             "risingSort": true
           },
           "expect": {
             "binSel": 2,
             "sortPulse": true
+          }
+        },
+        {
+          "inputs": {
+            "height": 25.0,
+            "risingSort": false
+          },
+          "expect": {
+            "sortPulse": false
           }
         },
         {

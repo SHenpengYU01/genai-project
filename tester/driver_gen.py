@@ -1,0 +1,250 @@
+"""Generate a CODESYS ST self-test driver PROGRAM for a task.
+
+Driver structure (one scan per test step, with ``repeat`` handled):
+
+    IF NOT done THEN
+        CASE tc OF ... set inputs + curRepeat ... END_CASE   (per step)
+        fb(inputs := v_..., inouts := io_...);
+        stepFail := FALSE;
+        CASE tc OF ... stepFail := <mismatch exprs> ... END_CASE  (per step)
+        repCnt := repCnt + 1;
+        IF repCnt >= curRepeat THEN record pass/fail; advance END_IF
+    END_IF
+
+Results: CI_TEST_DRIVER.done / .allPass / .passCnt / .failCnt /
+.firstFailTc / .firstFailStep, read back over the online API.
+
+Test-case array values are 0-indexed and map to LOWER_BOUND + i. Only keys
+present in ``expect`` are compared.
+"""
+import json
+
+
+def _base(t):
+    return t.strip().split('(')[0].strip()
+
+
+def _parse_array(t):
+    s = t.strip()
+    close = s.index(']')
+    inner = s[s.index('[') + 1:close].strip()
+    rest = s[close + 1:].strip()
+    if rest.upper().startswith('OF'):
+        rest = rest[2:].strip()
+    bounds = None if inner == '*' else \
+        tuple(int(x.strip()) for x in inner.split('..'))
+    return bounds, rest
+
+
+def _classify(t, struct_names):
+    s = t.strip()
+    if s.upper().startswith('ARRAY['):
+        bounds, elem = _parse_array(s)
+        return {'kind': 'array', 'bounds': bounds,
+                'elem': _classify(elem, struct_names)}
+    base = _base(s)
+    if base in struct_names:
+        return {'kind': 'struct', 'name': base}
+    return {'kind': 'scalar', 'type': s}
+
+
+def _literal(value, t):
+    b = _base(t).upper()
+    if b == 'BOOL':
+        return 'TRUE' if value else 'FALSE'
+    if b == 'LTIME' and isinstance(value, str) and value.upper().startswith('T#'):
+        return 'LTIME#' + value[2:]
+    if b in ('TIME', 'DATE', 'TIME_OF_DAY', 'TOD', 'DATE_AND_TIME', 'DT'):
+        if isinstance(value, str):
+            return value
+    if b.startswith('STRING') or b.startswith('WSTRING'):
+        return "'%s'" % str(value)
+    if b in ('CHAR', 'WCHAR'):
+        return "'%s'" % str(value)
+    if isinstance(value, bool):
+        return 'TRUE' if value else 'FALSE'
+    if isinstance(value, float):
+        return repr(value)
+    return str(value)
+
+
+def _assign_lines(target, value, tinfo, duts_map, indent):
+    k = tinfo['kind']
+    if k == 'scalar':
+        return [indent + "%s := %s;" % (target, _literal(value, tinfo['type']))]
+    if k == 'struct':
+        lines = []
+        for f, fv in value.items():
+            ft = duts_map[tinfo['name']][f]
+            lines += _assign_lines("%s.%s" % (target, f), fv,
+                                   _classify(ft, set(duts_map)), duts_map, indent)
+        return lines
+    lo = tinfo['bounds'][0] if tinfo['bounds'] else 1
+    lines = []
+    for j, ev in enumerate(value):
+        lines += _assign_lines("%s[%d]" % (target, lo + j), ev,
+                               tinfo['elem'], duts_map, indent)
+    return lines
+
+
+def _mismatch_exprs(actual, value, tinfo, duts_map):
+    k = tinfo['kind']
+    if k == 'scalar':
+        return ["(%s <> %s)" % (actual, _literal(value, tinfo['type']))]
+    if k == 'struct':
+        out = []
+        for f, fv in value.items():
+            ft = duts_map[tinfo['name']][f]
+            out += _mismatch_exprs("%s.%s" % (actual, f), fv,
+                                   _classify(ft, set(duts_map)), duts_map)
+        return out
+    lo = tinfo['bounds'][0] if tinfo['bounds'] else 1
+    out = []
+    for j, ev in enumerate(value):
+        out += _mismatch_exprs("%s[%d]" % (actual, lo + j), ev,
+                               tinfo['elem'], duts_map)
+    return out
+
+
+def _concrete_type(name, tinfo, entry, test_cases):
+    if tinfo['kind'] != 'array' or tinfo['bounds'] is not None:
+        return entry['type'].strip()
+    cap = entry.get('capacity') or 1
+    for tc in test_cases:
+        for st in tc['steps']:
+            for src in (st['inputs'], st['expect']):
+                v = src.get(name)
+                if isinstance(v, list):
+                    cap = max(cap, len(v))
+    _, elem = _parse_array(entry['type'])
+    return "ARRAY[1..%d] OF %s" % (cap, elem)
+
+
+def generate(task):
+    fb = task['pou']['name']
+    itf = task['interface']
+    duts = {d['name']: {f['name']: f['type'] for f in d.get('fields', [])}
+            for d in itf.get('duts', [])}
+    struct_names = set(duts)
+    inputs = itf['inputs']
+    outputs = itf['outputs']
+    inouts = itf['inouts']
+    cases = task['test_cases']
+
+    in_info = {e['name']: _classify(e['type'], struct_names) for e in inputs}
+    out_info = {e['name']: _classify(e['type'], struct_names) for e in outputs}
+    io_entries = {e['name']: e for e in inouts}
+    io_info = {e['name']: _classify(e['type'], struct_names) for e in inouts}
+    io_type = {n: _concrete_type(n, io_info[n], io_entries[n], cases)
+               for n in io_info}
+
+    L = []
+    a = L.append
+    a("PROGRAM CI_TEST_DRIVER")
+    a("VAR")
+    a("    fb : ARRAY[0..%d] OF %s;" % (len(cases) - 1, fb))
+    a("    step : INT := 0;")
+    a("    repCnt : INT := 0;")
+    a("    tc : INT := 0;")
+    a("    done : BOOL := FALSE;")
+    a("    allPass : BOOL := TRUE;")
+    a("    passCnt : INT := 0;")
+    a("    failCnt : INT := 0;")
+    a("    firstFailTc : INT := -1;")
+    a("    firstFailStep : INT := -1;")
+    a("    curRepeat : INT := 1;")
+    a("    curLen : INT := 0;")
+    a("    stepFail : BOOL;")
+    for e in inputs:
+        a("    v_%s : %s;" % (e['name'], e['type']))
+    for e in inouts:
+        a("    io_%s : ARRAY[0..%d] OF %s;"
+          % (e['name'], len(cases) - 1, io_type[e['name']]))
+    a("END_VAR")
+    a("")
+    a("IF NOT done THEN")
+    a("    (* set inputs for the current step *)")
+    a("    CASE tc OF")
+    for i, tc in enumerate(cases):
+        a("    %d:" % i)
+        a("        CASE step OF")
+        for s, st in enumerate(tc['steps']):
+            a("        %d:" % s)
+            for e in inputs:
+                v = st['inputs'].get(e['name'])
+                if v is not None:
+                    for ln in _assign_lines("v_%s" % e['name'], v,
+                                            in_info[e['name']], duts, "            "):
+                        a(ln)
+            for e in inouts:
+                v = st['inputs'].get(e['name'])
+                if v is not None:
+                    for ln in _assign_lines("io_%s[tc]" % e['name'], v,
+                                            io_info[e['name']], duts, "            "):
+                        a(ln)
+            a("            curRepeat := %d;" % st.get('repeat', 1))
+        a("        END_CASE")
+        a("        curLen := %d;" % len(tc['steps']))
+    a("    END_CASE")
+    a("")
+    args = []
+    for e in inputs:
+        args.append("%s := v_%s" % (e['name'], e['name']))
+    for e in inouts:
+        args.append("%s := io_%s[tc]" % (e['name'], e['name']))
+    a("    fb[tc](%s);" % ", ".join(args))
+    a("")
+    a("    (* compare outputs for the current step *)")
+    a("    stepFail := FALSE;")
+    a("    CASE tc OF")
+    for i, tc in enumerate(cases):
+        a("    %d:" % i)
+        a("        CASE step OF")
+        for s, st in enumerate(tc['steps']):
+            exprs = []
+            for key, val in st['expect'].items():
+                if key in out_info:
+                    actual = "fb[tc].%s" % key
+                    tinfo = out_info[key]
+                elif key in io_info:
+                    actual = "io_%s[tc]" % key
+                    tinfo = io_info[key]
+                else:
+                    continue
+                exprs += _mismatch_exprs(actual, val, tinfo, duts)
+            a("        %d:" % s)
+            a("            stepFail := %s;"
+              % (" OR ".join(exprs) if exprs else "FALSE"))
+        a("        END_CASE")
+    a("    END_CASE")
+    a("")
+    a("    repCnt := repCnt + 1;")
+    a("    IF repCnt >= curRepeat THEN")
+    a("        IF stepFail THEN")
+    a("            allPass := FALSE;")
+    a("            failCnt := failCnt + 1;")
+    a("            IF firstFailTc < 0 THEN")
+    a("                firstFailTc := tc;")
+    a("                firstFailStep := step;")
+    a("            END_IF")
+    a("        ELSE")
+    a("            passCnt := passCnt + 1;")
+    a("        END_IF")
+    a("        repCnt := 0;")
+    a("        step := step + 1;")
+    a("        IF step >= curLen THEN")
+    a("            step := 0;")
+    a("            tc := tc + 1;")
+    a("            IF tc >= %d THEN" % len(cases))
+    a("                done := TRUE;")
+    a("            END_IF")
+    a("        END_IF")
+    a("    END_IF")
+    a("END_IF")
+    return "\n".join(L) + "\n"
+
+
+if __name__ == "__main__":
+    import sys
+    task = json.load(open(sys.argv[1], encoding="utf-8"))
+    print(generate(task))

@@ -170,7 +170,7 @@
       "steps": [
         {
           "inputs": {
-            "VISCOSITY_OK": true,
+            "VISCOSITY_OK": false,
             "PASTE_E_STOP_NC": true,
             "DebounceTime": "T#50ms",
             "CycleTime": "T#10ms"

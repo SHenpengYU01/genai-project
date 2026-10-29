@@ -178,7 +178,7 @@
             ]
           },
           "expect": {
-            "conveyorRight": false
+            "conveyorRight": true
           }
         },
         {

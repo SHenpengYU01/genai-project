@@ -58,7 +58,7 @@
         },
         {
           "inputs": {},
-          "repeat": 4,
+          "repeat": 5,
           "expect": {
             "NS_Green": true,
             "EW_Green": false
@@ -74,7 +74,7 @@
         },
         {
           "inputs": {},
-          "repeat": 4,
+          "repeat": 5,
           "expect": {
             "NS_Green": false,
             "EW_Green": true
@@ -98,7 +98,7 @@
         "name": "TrafficLight",
         "kind": "function_block",
         "declaration": "FUNCTION_BLOCK TrafficLight\nVAR_OUTPUT\n    NS_Green : BOOL;\n    EW_Green : BOOL;\nEND_VAR\nVAR\n    phase : INT := 0;\n    timer : TON;\nEND_VAR\n",
-        "implementation": "timer(IN := NOT timer.Q, PT := T#5s);\nIF timer.Q THEN\n    phase := 1 - phase;\nEND_IF\nIF phase = 0 THEN\n    NS_Green := TRUE;\n    EW_Green := FALSE;\nELSE\n    NS_Green := FALSE;\n    EW_Green := TRUE;\nEND_IF\n"
+        "implementation": "IF phase = 0 THEN\n    NS_Green := TRUE;\n    EW_Green := FALSE;\nELSE\n    NS_Green := FALSE;\n    EW_Green := TRUE;\nEND_IF\ntimer(IN := TRUE, PT := T#5s);\nIF timer.Q THEN\n    phase := 1 - phase;\n    timer(IN := FALSE);\nEND_IF\n"
       }
     ]
   }

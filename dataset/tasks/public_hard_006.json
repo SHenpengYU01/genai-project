@@ -51,7 +51,8 @@
       {
         "name": "buffer",
         "type": "ARRAY[*] OF INT",
-        "desc": "队列存储"
+        "desc": "队列存储",
+        "capacity": 10
       }
     ]
   },
@@ -101,6 +102,18 @@
             "buffer": [
               5
             ]
+          }
+        },
+        {
+          "inputs": {
+            "enqueue": false,
+            "dequeue": false,
+            "reset": false,
+            "item": 7
+          },
+          "expect": {
+            "elementCount": 1,
+            "status": 0
           }
         },
         {

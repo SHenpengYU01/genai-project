@@ -124,9 +124,119 @@
   "test_cases": [
     {
       "id": "TC1",
-      "description": "合格品焙烧温度计算",
+      "description": "合格品焙烧温度计算(完整流程)",
       "scan_ms": 10,
       "steps": [
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorFeed": true,
+            "SensorWash": false,
+            "SensorWeight": false,
+            "SensorFiring": false,
+            "SensorOutput": false,
+            "washComplete": false,
+            "weightComplete": false,
+            "weight": 150.0,
+            "firingComplete": false
+          },
+          "expect": {}
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorFeed": false,
+            "SensorWash": false,
+            "SensorWeight": false,
+            "SensorFiring": false,
+            "SensorOutput": false,
+            "washComplete": false,
+            "weightComplete": false,
+            "weight": 150.0,
+            "firingComplete": false
+          },
+          "expect": {
+            "MotorForward": true
+          }
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorFeed": false,
+            "SensorWash": true,
+            "SensorWeight": false,
+            "SensorFiring": false,
+            "SensorOutput": false,
+            "washComplete": false,
+            "weightComplete": false,
+            "weight": 150.0,
+            "firingComplete": false
+          },
+          "expect": {
+            "MotorForward": true
+          }
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorFeed": false,
+            "SensorWash": true,
+            "SensorWeight": false,
+            "SensorFiring": false,
+            "SensorOutput": false,
+            "washComplete": true,
+            "weightComplete": false,
+            "weight": 150.0,
+            "firingComplete": false
+          },
+          "expect": {}
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorFeed": false,
+            "SensorWash": false,
+            "SensorWeight": false,
+            "SensorFiring": false,
+            "SensorOutput": false,
+            "washComplete": false,
+            "weightComplete": false,
+            "weight": 150.0,
+            "firingComplete": false
+          },
+          "expect": {
+            "MotorForward": true
+          }
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorFeed": false,
+            "SensorWash": false,
+            "SensorWeight": true,
+            "SensorFiring": false,
+            "SensorOutput": false,
+            "washComplete": false,
+            "weightComplete": false,
+            "weight": 150.0,
+            "firingComplete": false
+          },
+          "expect": {
+            "MotorForward": true
+          }
+        },
         {
           "inputs": {
             "Mode": true,
@@ -151,9 +261,119 @@
     },
     {
       "id": "TC2",
-      "description": "不合格品剔除",
+      "description": "不合格品剔除(完整流程)",
       "scan_ms": 10,
       "steps": [
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorFeed": true,
+            "SensorWash": false,
+            "SensorWeight": false,
+            "SensorFiring": false,
+            "SensorOutput": false,
+            "washComplete": false,
+            "weightComplete": false,
+            "weight": 150.0,
+            "firingComplete": false
+          },
+          "expect": {}
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorFeed": false,
+            "SensorWash": false,
+            "SensorWeight": false,
+            "SensorFiring": false,
+            "SensorOutput": false,
+            "washComplete": false,
+            "weightComplete": false,
+            "weight": 150.0,
+            "firingComplete": false
+          },
+          "expect": {
+            "MotorForward": true
+          }
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorFeed": false,
+            "SensorWash": true,
+            "SensorWeight": false,
+            "SensorFiring": false,
+            "SensorOutput": false,
+            "washComplete": false,
+            "weightComplete": false,
+            "weight": 150.0,
+            "firingComplete": false
+          },
+          "expect": {
+            "MotorForward": true
+          }
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorFeed": false,
+            "SensorWash": true,
+            "SensorWeight": false,
+            "SensorFiring": false,
+            "SensorOutput": false,
+            "washComplete": true,
+            "weightComplete": false,
+            "weight": 150.0,
+            "firingComplete": false
+          },
+          "expect": {}
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorFeed": false,
+            "SensorWash": false,
+            "SensorWeight": false,
+            "SensorFiring": false,
+            "SensorOutput": false,
+            "washComplete": false,
+            "weightComplete": false,
+            "weight": 150.0,
+            "firingComplete": false
+          },
+          "expect": {
+            "MotorForward": true
+          }
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorFeed": false,
+            "SensorWash": false,
+            "SensorWeight": true,
+            "SensorFiring": false,
+            "SensorOutput": false,
+            "washComplete": false,
+            "weightComplete": false,
+            "weight": 150.0,
+            "firingComplete": false
+          },
+          "expect": {
+            "MotorForward": true
+          }
+        },
         {
           "inputs": {
             "Mode": true,

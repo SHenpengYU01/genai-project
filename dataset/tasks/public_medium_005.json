@@ -203,7 +203,7 @@
             "ButtonC": false
           },
           "expect": {
-            "MotorForward": false
+            "MotorForward": true
           }
         },
         {
@@ -249,7 +249,7 @@
             "ButtonC": false
           },
           "expect": {
-            "MotorForward": false
+            "MotorForward": true
           }
         },
         {

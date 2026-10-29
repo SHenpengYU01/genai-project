@@ -133,7 +133,7 @@
     },
     {
       "id": "TC2",
-      "description": "下降沿与混合边沿",
+      "description": "下降沿检测(新实例首拍为上升沿)",
       "scan_ms": 10,
       "steps": [
         {
@@ -141,10 +141,10 @@
             "value": 5
           },
           "expect": {
-            "hasChanged": false,
-            "hasRisingEdges": false,
-            "risingBits": 0,
-            "noOfRisingBits": 0,
+            "hasChanged": true,
+            "hasRisingEdges": true,
+            "risingBits": 5,
+            "noOfRisingBits": 2,
             "hasFallingEdges": false,
             "fallingBits": 0,
             "noOfFallingBits": 0

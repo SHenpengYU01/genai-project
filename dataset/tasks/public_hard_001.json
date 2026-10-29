@@ -218,6 +218,24 @@
         },
         {
           "inputs": {
+            "addRecipe": false,
+            "deleteRecipe": false,
+            "modifyRecipe": false,
+            "queryRecipe": false,
+            "recipeIn": {
+              "recipeID": 1,
+              "ingredientType": 5,
+              "ingredientRatio": 30.0,
+              "productionTemperature": 120.0
+            }
+          },
+          "expect": {
+            "recipeAdded": false,
+            "error": false
+          }
+        },
+        {
+          "inputs": {
             "addRecipe": true,
             "deleteRecipe": false,
             "modifyRecipe": false,

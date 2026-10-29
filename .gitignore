@@ -15,6 +15,7 @@ __pycache__/
 
 # 编译服务临时目录（生成的工程副本、请求/响应文件）
 tool/work/
+tester/work/
 
 # 临时探测脚本
 tool/_probe*.py

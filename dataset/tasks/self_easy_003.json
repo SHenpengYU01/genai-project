@@ -78,7 +78,7 @@
             "obstacle": false
           },
           "expect": {
-            "openCmd": true,
+            "openCmd": false,
             "closeCmd": false
           }
         },
@@ -104,6 +104,32 @@
           "repeat": 3,
           "expect": {
             "openCmd": false,
+            "closeCmd": false
+          }
+        },
+        {
+          "inputs": {
+            "presence": false,
+            "openLimit": true,
+            "closeLimit": false,
+            "obstacle": false
+          },
+          "repeat": 1,
+          "expect": {
+            "openCmd": false,
+            "closeCmd": false
+          }
+        },
+        {
+          "inputs": {
+            "presence": false,
+            "openLimit": true,
+            "closeLimit": false,
+            "obstacle": false
+          },
+          "repeat": 1,
+          "expect": {
+            "openCmd": false,
             "closeCmd": true
           }
         }
@@ -116,10 +142,85 @@
       "steps": [
         {
           "inputs": {
-            "presence": false,
+            "presence": true,
             "openLimit": false,
             "closeLimit": false,
+            "obstacle": false
+          },
+          "expect": {
+            "openCmd": false,
+            "closeCmd": false
+          }
+        },
+        {
+          "inputs": {
+            "presence": false,
+            "openLimit": true,
+            "closeLimit": false,
+            "obstacle": false
+          },
+          "expect": {
+            "openCmd": true,
+            "closeCmd": false
+          }
+        },
+        {
+          "inputs": {
+            "presence": false,
+            "openLimit": true,
+            "closeLimit": false,
+            "obstacle": false
+          },
+          "repeat": 3,
+          "expect": {
+            "openCmd": false,
+            "closeCmd": false
+          }
+        },
+        {
+          "inputs": {
+            "presence": false,
+            "openLimit": true,
+            "closeLimit": false,
+            "obstacle": false
+          },
+          "repeat": 1,
+          "expect": {
+            "openCmd": false,
+            "closeCmd": false
+          }
+        },
+        {
+          "inputs": {
+            "presence": false,
+            "openLimit": true,
+            "closeLimit": false,
+            "obstacle": false
+          },
+          "repeat": 1,
+          "expect": {
+            "openCmd": false,
+            "closeCmd": true
+          }
+        },
+        {
+          "inputs": {
+            "presence": false,
+            "openLimit": true,
+            "closeLimit": false,
             "obstacle": true
+          },
+          "expect": {
+            "openCmd": false,
+            "closeCmd": true
+          }
+        },
+        {
+          "inputs": {
+            "presence": false,
+            "openLimit": true,
+            "closeLimit": false,
+            "obstacle": false
           },
           "expect": {
             "openCmd": true,

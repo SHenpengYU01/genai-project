@@ -49,9 +49,9 @@ _t(
     test_cases=[
         {"id": "TC1", "description": "相位交替", "scan_ms": 1000, "steps": [
             {"inputs": {}, "expect": {"NS_Green": True, "EW_Green": False}},
-            {"inputs": {}, "repeat": 4, "expect": {"NS_Green": True, "EW_Green": False}},
+            {"inputs": {}, "repeat": 5, "expect": {"NS_Green": True, "EW_Green": False}},
             {"inputs": {}, "repeat": 1, "expect": {"NS_Green": False, "EW_Green": True}},
-            {"inputs": {}, "repeat": 4, "expect": {"NS_Green": False, "EW_Green": True}},
+            {"inputs": {}, "repeat": 5, "expect": {"NS_Green": False, "EW_Green": True}},
             {"inputs": {}, "repeat": 1, "expect": {"NS_Green": True, "EW_Green": False}},
         ]},
     ],
@@ -62,16 +62,17 @@ _t(
             "VAR_OUTPUT\n    NS_Green : BOOL;\n    EW_Green : BOOL;\nEND_VAR\n"
             "VAR\n    phase : INT := 0;\n    timer : TON;\nEND_VAR\n"),
         "implementation": (
-            "timer(IN := NOT timer.Q, PT := T#5s);\n"
-            "IF timer.Q THEN\n"
-            "    phase := 1 - phase;\n"
-            "END_IF\n"
             "IF phase = 0 THEN\n"
             "    NS_Green := TRUE;\n"
             "    EW_Green := FALSE;\n"
             "ELSE\n"
             "    NS_Green := FALSE;\n"
             "    EW_Green := TRUE;\n"
+            "END_IF\n"
+            "timer(IN := TRUE, PT := T#5s);\n"
+            "IF timer.Q THEN\n"
+            "    phase := 1 - phase;\n"
+            "    timer(IN := FALSE);\n"
             "END_IF\n"),
     }]},
 )
@@ -172,14 +173,30 @@ _t(
     test_cases=[
         {"id": "TC1", "description": "开门保持后关门", "scan_ms": 1000, "steps": [
             {"inputs": {"presence": True, "openLimit": False, "closeLimit": False, "obstacle": False},
-             "expect": {"openCmd": True, "closeCmd": False}},
+             "expect": {"openCmd": False, "closeCmd": False}},
             {"inputs": {"presence": False, "openLimit": True, "closeLimit": False, "obstacle": False},
              "expect": {"openCmd": True, "closeCmd": False}},
             {"inputs": {"presence": False, "openLimit": True, "closeLimit": False, "obstacle": False},
-             "repeat": 3, "expect": {"openCmd": False, "closeCmd": True}},
+             "repeat": 3, "expect": {"openCmd": False, "closeCmd": False}},
+            {"inputs": {"presence": False, "openLimit": True, "closeLimit": False, "obstacle": False},
+             "repeat": 1, "expect": {"openCmd": False, "closeCmd": False}},
+            {"inputs": {"presence": False, "openLimit": True, "closeLimit": False, "obstacle": False},
+             "repeat": 1, "expect": {"openCmd": False, "closeCmd": True}},
         ]},
         {"id": "TC2", "description": "关门遇障碍重开", "scan_ms": 1000, "steps": [
-            {"inputs": {"presence": False, "openLimit": False, "closeLimit": False, "obstacle": True},
+            {"inputs": {"presence": True, "openLimit": False, "closeLimit": False, "obstacle": False},
+             "expect": {"openCmd": False, "closeCmd": False}},
+            {"inputs": {"presence": False, "openLimit": True, "closeLimit": False, "obstacle": False},
+             "expect": {"openCmd": True, "closeCmd": False}},
+            {"inputs": {"presence": False, "openLimit": True, "closeLimit": False, "obstacle": False},
+             "repeat": 3, "expect": {"openCmd": False, "closeCmd": False}},
+            {"inputs": {"presence": False, "openLimit": True, "closeLimit": False, "obstacle": False},
+             "repeat": 1, "expect": {"openCmd": False, "closeCmd": False}},
+            {"inputs": {"presence": False, "openLimit": True, "closeLimit": False, "obstacle": False},
+             "repeat": 1, "expect": {"openCmd": False, "closeCmd": True}},
+            {"inputs": {"presence": False, "openLimit": True, "closeLimit": False, "obstacle": True},
+             "expect": {"openCmd": False, "closeCmd": True}},
+            {"inputs": {"presence": False, "openLimit": True, "closeLimit": False, "obstacle": False},
              "expect": {"openCmd": True, "closeCmd": False}},
         ]},
     ],
@@ -255,9 +272,11 @@ _t(
          "formula": "G(binSel >= 1 && binSel <= 3)"},
     ],
     test_cases=[
-        {"id": "TC1", "description": "区间分拣", "scan_ms": 10, "steps": [
+        {"id": "TC1", "description": "区间分拣(每次分拣为上升沿)", "scan_ms": 10, "steps": [
             {"inputs": {"height": 5.0, "risingSort": True}, "expect": {"binSel": 1, "sortPulse": True}},
+            {"inputs": {"height": 15.0, "risingSort": False}, "expect": {"sortPulse": False}},
             {"inputs": {"height": 15.0, "risingSort": True}, "expect": {"binSel": 2, "sortPulse": True}},
+            {"inputs": {"height": 25.0, "risingSort": False}, "expect": {"sortPulse": False}},
             {"inputs": {"height": 25.0, "risingSort": True}, "expect": {"binSel": 3, "sortPulse": True}},
         ]},
     ],
@@ -545,7 +564,11 @@ _t(
              "expect": {"count": 0, "fullIndicator": False, "entryGate": True}},
             {"inputs": {"entrySensor": True, "exitSensor": False, "capacity": 3},
              "expect": {"count": 1, "entryGate": True}},
+            {"inputs": {"entrySensor": False, "exitSensor": False, "capacity": 3},
+             "expect": {"count": 1}},
             {"inputs": {"entrySensor": True, "exitSensor": False, "capacity": 3},
+             "expect": {"count": 2}},
+            {"inputs": {"entrySensor": False, "exitSensor": False, "capacity": 3},
              "expect": {"count": 2}},
             {"inputs": {"entrySensor": True, "exitSensor": False, "capacity": 3},
              "expect": {"count": 3, "fullIndicator": True, "entryGate": False}},
@@ -678,11 +701,13 @@ _t(
     test_cases=[
         {"id": "TC1", "description": "上行到目标层并开门", "scan_ms": 1000, "steps": [
             {"inputs": {"targetFloor": 3, "floorSensor1": True, "floorSensor2": False, "floorSensor3": False},
-             "expect": {}},
+             "expect": {"motorUp": True, "motorDown": False, "doorOpen": False}},
             {"inputs": {"targetFloor": 3, "floorSensor1": False, "floorSensor2": True, "floorSensor3": False},
              "expect": {"motorUp": True, "motorDown": False, "doorOpen": False}},
             {"inputs": {"targetFloor": 3, "floorSensor1": False, "floorSensor2": False, "floorSensor3": True},
-             "expect": {"motorUp": False, "doorOpen": True}},
+             "expect": {"motorUp": False, "motorDown": False, "doorOpen": False}},
+            {"inputs": {"targetFloor": 3, "floorSensor1": False, "floorSensor2": False, "floorSensor3": True},
+             "expect": {"motorUp": False, "motorDown": False, "doorOpen": True}},
         ]},
     ],
     reference={"duts": [], "pous": [{
@@ -703,16 +728,12 @@ _t(
             "    ELSIF floorSensor2 THEN current := 2;\n"
             "    ELSIF floorSensor3 THEN current := 3;\n"
             "    END_IF\n"
-            "    IF targetFloor <> current THEN\n"
-            "        IF targetFloor > current THEN\n"
-            "            motorUp := TRUE;\n"
-            "        ELSE\n"
-            "            motorDown := TRUE;\n"
-            "        END_IF\n"
-            "        IF (targetFloor = 1 AND floorSensor1) OR (targetFloor = 2 AND floorSensor2)\n"
-            "            OR (targetFloor = 3 AND floorSensor3) THEN\n"
-            "            stage := 1;\n"
-            "        END_IF\n"
+            "    IF targetFloor > current THEN\n"
+            "        motorUp := TRUE;\n"
+            "    ELSIF targetFloor < current THEN\n"
+            "        motorDown := TRUE;\n"
+            "    ELSE\n"
+            "        stage := 1;\n"
             "    END_IF\n"
             "1:\n"
             "    doorOpen := TRUE;\n"

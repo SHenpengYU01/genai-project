@@ -258,10 +258,10 @@ TASKS.append({
                         "hasFallingEdges": False, "fallingBits": 0,
                         "noOfFallingBits": 0}},
         ]},
-        {"id": "TC2", "description": "下降沿与混合边沿", "scan_ms": 10, "steps": [
+        {"id": "TC2", "description": "下降沿检测(新实例首拍为上升沿)", "scan_ms": 10, "steps": [
             {"inputs": {"value": 5},
-             "expect": {"hasChanged": False, "hasRisingEdges": False,
-                        "risingBits": 0, "noOfRisingBits": 0,
+             "expect": {"hasChanged": True, "hasRisingEdges": True,
+                        "risingBits": 5, "noOfRisingBits": 2,
                         "hasFallingEdges": False, "fallingBits": 0,
                         "noOfFallingBits": 0}},
             {"inputs": {"value": 1},
@@ -521,7 +521,7 @@ TASKS.append({
              "expect": {"VFD_RUN": True, "PUMP_RUNTIME_ACC": "T#20ms"}},
         ]},
         {"id": "TC2", "description": "失粘立即停止且累计保持", "scan_ms": 10, "steps": [
-            {"inputs": {"VISCOSITY_OK": True, "PASTE_E_STOP_NC": True,
+            {"inputs": {"VISCOSITY_OK": False, "PASTE_E_STOP_NC": True,
                         "DebounceTime": "T#50ms", "CycleTime": "T#10ms"},
              "expect": {"VFD_RUN": False, "PUMP_RUNTIME_ACC": "T#0ms"}},
             {"inputs": {"VISCOSITY_OK": True, "PASTE_E_STOP_NC": True,
@@ -649,13 +649,13 @@ TASKS.append({
     ],
     "test_cases": [
         {"id": "TC1", "description": "初始化抑制期后去抖报警并复位", "scan_ms": 20, "steps": [
-            {"inputs": {"Gap_Exceeded": True, "Weld_E_Stop_NC": True, "DebounceTime": "T#100ms"},
-             "repeat": 100, "expect": {"Weld_Soft_Start_Active": True, "Operator_Alert": False}},
-            {"inputs": {"Gap_Exceeded": True, "Weld_E_Stop_NC": True, "DebounceTime": "T#100ms"},
-             "repeat": 150, "expect": {"Weld_Soft_Start_Active": False, "Operator_Alert": False}},
-            {"inputs": {"Gap_Exceeded": True, "Weld_E_Stop_NC": True, "DebounceTime": "T#100ms"},
-             "repeat": 5, "expect": {"Operator_Alert": True}},
-            {"inputs": {"Gap_Exceeded": False, "Weld_E_Stop_NC": True, "DebounceTime": "T#100ms"},
+            {"inputs": {"Gap_Exceeded": True, "Weld_E_Stop_NC": True, "DebounceTime": "T#1s"},
+             "repeat": 200, "expect": {"Weld_Soft_Start_Active": True, "Operator_Alert": False}},
+            {"inputs": {"Gap_Exceeded": True, "Weld_E_Stop_NC": True, "DebounceTime": "T#1s"},
+             "repeat": 60, "expect": {"Weld_Soft_Start_Active": False, "Operator_Alert": False}},
+            {"inputs": {"Gap_Exceeded": True, "Weld_E_Stop_NC": True, "DebounceTime": "T#1s"},
+             "repeat": 50, "expect": {"Operator_Alert": True}},
+            {"inputs": {"Gap_Exceeded": False, "Weld_E_Stop_NC": True, "DebounceTime": "T#1s"},
              "repeat": 1, "expect": {"Operator_Alert": False}},
         ]},
         {"id": "TC2", "description": "急停优先于初始化和正常监控", "scan_ms": 20, "steps": [
@@ -755,11 +755,13 @@ TASKS.append({
             {"inputs": {"DO_LOW": True, "AERATION_E_STOP_NC": True},
              "expect": {"BLOWER_RUN": False, "AERATION_BLOWER_CYCLE_COUNT": 0}},
             {"inputs": {"DO_LOW": True, "AERATION_E_STOP_NC": True},
-             "expect": {"BLOWER_RUN": True, "AERATION_BLOWER_CYCLE_COUNT": 1}},
+             "expect": {"BLOWER_RUN": False, "AERATION_BLOWER_CYCLE_COUNT": 0}},
             {"inputs": {"DO_LOW": True, "AERATION_E_STOP_NC": True},
              "expect": {"BLOWER_RUN": True, "AERATION_BLOWER_CYCLE_COUNT": 1}},
         ]},
         {"id": "TC2", "description": "需求消失复位计时并重新计数", "scan_ms": 1000, "steps": [
+            {"inputs": {"DO_LOW": True, "AERATION_E_STOP_NC": True},
+             "expect": {"BLOWER_RUN": False, "AERATION_BLOWER_CYCLE_COUNT": 0}},
             {"inputs": {"DO_LOW": True, "AERATION_E_STOP_NC": True},
              "expect": {"BLOWER_RUN": False, "AERATION_BLOWER_CYCLE_COUNT": 0}},
             {"inputs": {"DO_LOW": True, "AERATION_E_STOP_NC": True},
@@ -1104,9 +1106,7 @@ TASKS.append({
                 "            buffer[head] := value;\n"
                 "        END_IF\n"
                 "        windowSizeReached := (count >= windowSize);\n"
-                "        IF windowSizeReached THEN\n"
-                "            average := sum / INT_TO_LREAL(windowSize);\n"
-                "        END_IF\n"
+                "        average := sum / INT_TO_LREAL(count);\n"
                 "    END_IF\n"
                 "END_IF\n"),
         }],
@@ -1171,23 +1171,15 @@ TASKS.append({
         ]},
         {"id": "TC3", "description": "过热保护与恢复", "scan_ms": 1000, "steps": [
             {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
-             "expect": {"HeaterOutput": True, "OverheatProtection": False}},
+             "repeat": 5, "expect": {"HeaterOutput": True, "OverheatProtection": False}},
             {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
-             "expect": {"HeaterOutput": True, "OverheatProtection": False}},
+             "repeat": 1, "expect": {"HeaterOutput": False, "OverheatProtection": True}},
             {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
-             "expect": {"HeaterOutput": True, "OverheatProtection": False}},
+             "repeat": 3, "expect": {"HeaterOutput": False, "OverheatProtection": True}},
             {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
-             "expect": {"HeaterOutput": True, "OverheatProtection": False}},
+             "repeat": 1, "expect": {"HeaterOutput": False, "OverheatProtection": False}},
             {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
-             "expect": {"HeaterOutput": False, "OverheatProtection": True}},
-            {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
-             "expect": {"HeaterOutput": False, "OverheatProtection": True}},
-            {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
-             "expect": {"HeaterOutput": False, "OverheatProtection": True}},
-            {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
-             "expect": {"HeaterOutput": False, "OverheatProtection": False}},
-            {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
-             "expect": {"HeaterOutput": True, "OverheatProtection": False}},
+             "repeat": 1, "expect": {"HeaterOutput": True, "OverheatProtection": False}},
         ]},
     ],
     "reference": {
@@ -1481,7 +1473,7 @@ TASKS.append({
             {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
                         "SensorA": False, "SensorB": True, "SensorC": False,
                         "ButtonA": False, "ButtonB": False, "ButtonC": False},
-             "expect": {"MotorForward": False}},
+             "expect": {"MotorForward": True}},
             {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
                         "SensorA": False, "SensorB": True, "SensorC": False,
                         "ButtonA": False, "ButtonB": True, "ButtonC": False},
@@ -1493,7 +1485,7 @@ TASKS.append({
             {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
                         "SensorA": False, "SensorB": False, "SensorC": True,
                         "ButtonA": False, "ButtonB": False, "ButtonC": False},
-             "expect": {"MotorForward": False}},
+             "expect": {"MotorForward": True}},
             {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
                         "SensorA": False, "SensorB": False, "SensorC": True,
                         "ButtonA": False, "ButtonB": False, "ButtonC": True},
@@ -1889,7 +1881,7 @@ TASKS.append({
                 "result := 0;\n"
                 "valid := TRUE;\n"
                 "started := FALSE;\n"
-                "FOR i := 1 TO n DO\n"
+                "FOR i := 0 TO n - 1 DO\n"
                 "    ch := ipText[i];\n"
                 "    IF ch = 46 THEN\n"
                 "        IF NOT started OR segVal > 255 THEN\n"
@@ -2011,6 +2003,11 @@ TASKS.append({
                         "recipeIn": {"recipeID": 1, "ingredientType": 5,
                                      "ingredientRatio": 30.0, "productionTemperature": 120.0}},
              "expect": {"recipeAdded": True, "error": False}},
+            {"inputs": {"addRecipe": False, "deleteRecipe": False, "modifyRecipe": False,
+                        "queryRecipe": False,
+                        "recipeIn": {"recipeID": 1, "ingredientType": 5,
+                                     "ingredientRatio": 30.0, "productionTemperature": 120.0}},
+             "expect": {"recipeAdded": False, "error": False}},
             {"inputs": {"addRecipe": True, "deleteRecipe": False, "modifyRecipe": False,
                         "queryRecipe": False,
                         "recipeIn": {"recipeID": 1, "ingredientType": 9,
@@ -2367,6 +2364,15 @@ TASKS.append({
 # ---------------------------------------------------------------------------
 # hard 3: Production Control (5 stations + weighing + temperature calc)
 # ---------------------------------------------------------------------------
+def _pc(mode=True, feed=False, wash=False, wsen=False, firing=False,
+        output=False, wash_c=False, weight_c=False, w=150.0, firing_c=False):
+    return {"Mode": mode, "ForwardButton": False, "ReverseButton": False,
+            "SensorFeed": feed, "SensorWash": wash, "SensorWeight": wsen,
+            "SensorFiring": firing, "SensorOutput": output,
+            "washComplete": wash_c, "weightComplete": weight_c, "weight": w,
+            "firingComplete": firing_c}
+
+
 TASKS.append({
     "id": "public_hard_003",
     "source": "public",
@@ -2425,20 +2431,24 @@ TASKS.append({
          "formula": "G(firingTemp >= 500.0 && firingTemp <= 550.0)"},
     ],
     "test_cases": [
-        {"id": "TC1", "description": "合格品焙烧温度计算", "scan_ms": 10, "steps": [
-            {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
-                        "SensorFeed": False, "SensorWash": False, "SensorWeight": True,
-                        "SensorFiring": False, "SensorOutput": False,
-                        "washComplete": False, "weightComplete": True, "weight": 150.0,
-                        "firingComplete": False},
+        {"id": "TC1", "description": "合格品焙烧温度计算(完整流程)", "scan_ms": 10, "steps": [
+            {"inputs": _pc(feed=True), "expect": {}},
+            {"inputs": _pc(), "expect": {"MotorForward": True}},
+            {"inputs": _pc(wash=True), "expect": {"MotorForward": True}},
+            {"inputs": _pc(wash=True, wash_c=True), "expect": {}},
+            {"inputs": _pc(), "expect": {"MotorForward": True}},
+            {"inputs": _pc(wsen=True), "expect": {"MotorForward": True}},
+            {"inputs": _pc(wsen=True, weight_c=True, w=150.0),
              "expect": {"firingTemp": 525.0, "kick": False}},
         ]},
-        {"id": "TC2", "description": "不合格品剔除", "scan_ms": 10, "steps": [
-            {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
-                        "SensorFeed": False, "SensorWash": False, "SensorWeight": True,
-                        "SensorFiring": False, "SensorOutput": False,
-                        "washComplete": False, "weightComplete": True, "weight": 250.0,
-                        "firingComplete": False},
+        {"id": "TC2", "description": "不合格品剔除(完整流程)", "scan_ms": 10, "steps": [
+            {"inputs": _pc(feed=True), "expect": {}},
+            {"inputs": _pc(), "expect": {"MotorForward": True}},
+            {"inputs": _pc(wash=True), "expect": {"MotorForward": True}},
+            {"inputs": _pc(wash=True, wash_c=True), "expect": {}},
+            {"inputs": _pc(), "expect": {"MotorForward": True}},
+            {"inputs": _pc(wsen=True), "expect": {"MotorForward": True}},
+            {"inputs": _pc(wsen=True, weight_c=True, w=250.0),
              "expect": {"kick": True}},
         ]},
     ],
@@ -2612,7 +2622,7 @@ TASKS.append({
                         "station1Start": False, "station2Complete": False,
                         "station3Complete": False, "station4Complete": False,
                         "processSequence": [2, 4, 5, 0, 0, 0, 0, 0]},
-             "expect": {"conveyorRight": False}},
+             "expect": {"conveyorRight": True}},
             {"inputs": {"processLength": 3, "sensor1": False, "sensor2": True,
                         "sensor3": False, "sensor4": False, "sensor5": False,
                         "station1Start": False, "station2Complete": True,
@@ -2970,7 +2980,7 @@ TASKS.append({
         ],
         "inouts": [
             {"name": "item", "type": "INT", "desc": "入队取值/出队写回"},
-            {"name": "buffer", "type": "ARRAY[*] OF INT", "desc": "队列存储"},
+            {"name": "buffer", "type": "ARRAY[*] OF INT", "desc": "队列存储", "capacity": 10},
         ],
     },
     "meta": {
@@ -2988,6 +2998,8 @@ TASKS.append({
              "expect": {"elementCount": 0, "status": 0}},
             {"inputs": {"enqueue": True, "dequeue": False, "reset": False, "item": 5},
              "expect": {"elementCount": 1, "status": 0, "buffer": [5]}},
+            {"inputs": {"enqueue": False, "dequeue": False, "reset": False, "item": 7},
+             "expect": {"elementCount": 1, "status": 0}},
             {"inputs": {"enqueue": True, "dequeue": False, "reset": False, "item": 7},
              "expect": {"elementCount": 2, "status": 0}},
             {"inputs": {"enqueue": False, "dequeue": True, "reset": False, "item": 0},

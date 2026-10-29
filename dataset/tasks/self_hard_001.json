@@ -95,7 +95,27 @@
         },
         {
           "inputs": {
+            "entrySensor": false,
+            "exitSensor": false,
+            "capacity": 3
+          },
+          "expect": {
+            "count": 1
+          }
+        },
+        {
+          "inputs": {
             "entrySensor": true,
+            "exitSensor": false,
+            "capacity": 3
+          },
+          "expect": {
+            "count": 2
+          }
+        },
+        {
+          "inputs": {
+            "entrySensor": false,
             "exitSensor": false,
             "capacity": 3
           },

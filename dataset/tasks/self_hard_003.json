@@ -82,7 +82,11 @@
             "floorSensor2": false,
             "floorSensor3": false
           },
-          "expect": {}
+          "expect": {
+            "motorUp": true,
+            "motorDown": false,
+            "doorOpen": false
+          }
         },
         {
           "inputs": {
@@ -106,6 +110,20 @@
           },
           "expect": {
             "motorUp": false,
+            "motorDown": false,
+            "doorOpen": false
+          }
+        },
+        {
+          "inputs": {
+            "targetFloor": 3,
+            "floorSensor1": false,
+            "floorSensor2": false,
+            "floorSensor3": true
+          },
+          "expect": {
+            "motorUp": false,
+            "motorDown": false,
             "doorOpen": true
           }
         }
@@ -119,7 +137,7 @@
         "name": "Elevator",
         "kind": "function_block",
         "declaration": "FUNCTION_BLOCK Elevator\nVAR_INPUT\n    targetFloor : INT;\n    floorSensor1 : BOOL;\n    floorSensor2 : BOOL;\n    floorSensor3 : BOOL;\nEND_VAR\nVAR_OUTPUT\n    motorUp : BOOL;\n    motorDown : BOOL;\n    doorOpen : BOOL;\nEND_VAR\nVAR\n    current : INT := 1;\n    stage : INT := 0;\n    doorTon : TON;\nEND_VAR\n",
-        "implementation": "motorUp := FALSE;\nmotorDown := FALSE;\ndoorOpen := FALSE;\nCASE stage OF\n0:\n    IF floorSensor1 THEN current := 1;\n    ELSIF floorSensor2 THEN current := 2;\n    ELSIF floorSensor3 THEN current := 3;\n    END_IF\n    IF targetFloor <> current THEN\n        IF targetFloor > current THEN\n            motorUp := TRUE;\n        ELSE\n            motorDown := TRUE;\n        END_IF\n        IF (targetFloor = 1 AND floorSensor1) OR (targetFloor = 2 AND floorSensor2)\n            OR (targetFloor = 3 AND floorSensor3) THEN\n            stage := 1;\n        END_IF\n    END_IF\n1:\n    doorOpen := TRUE;\n    doorTon(IN := TRUE, PT := T#3s);\n    IF doorTon.Q THEN\n        stage := 0;\n    END_IF\nEND_CASE\n"
+        "implementation": "motorUp := FALSE;\nmotorDown := FALSE;\ndoorOpen := FALSE;\nCASE stage OF\n0:\n    IF floorSensor1 THEN current := 1;\n    ELSIF floorSensor2 THEN current := 2;\n    ELSIF floorSensor3 THEN current := 3;\n    END_IF\n    IF targetFloor > current THEN\n        motorUp := TRUE;\n    ELSIF targetFloor < current THEN\n        motorDown := TRUE;\n    ELSE\n        stage := 1;\n    END_IF\n1:\n    doorOpen := TRUE;\n    doorTon(IN := TRUE, PT := T#3s);\n    IF doorTon.Q THEN\n        stage := 0;\n    END_IF\nEND_CASE\n"
       }
     ]
   }
