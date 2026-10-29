@@ -1,0 +1,102 @@
+{
+  "id": "self_medium_001",
+  "source": "self_built",
+  "difficulty": "medium",
+  "title": "传送带高度分拣",
+  "pou": {
+    "type": "function_block",
+    "name": "HeightSort"
+  },
+  "requirement": {
+    "zh": "传送带上按物品高度分拣到三箱：高度 <10 到 1 号箱，10..20 到 2 号箱，>20 到 3 号箱。分拣信号 risingSort 的上升沿触发一次分拣，输出对应箱号选择 binSel(1/2/3)。",
+    "en": "Sort items into three bins by height: <10 to bin 1, 10..20 to bin 2, >20 to bin 3. A rising edge of risingSort triggers one sort; binSel outputs the chosen bin (1/2/3)."
+  },
+  "interface": {
+    "duts": [],
+    "inouts": [],
+    "inputs": [
+      {
+        "name": "height",
+        "type": "REAL",
+        "desc": "物品高度"
+      },
+      {
+        "name": "risingSort",
+        "type": "BOOL",
+        "desc": "分拣触发"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "binSel",
+        "type": "INT",
+        "desc": "选中的箱号 1/2/3"
+      },
+      {
+        "name": "sortPulse",
+        "type": "BOOL",
+        "desc": "分拣脉冲"
+      }
+    ]
+  },
+  "meta": {
+    "scenario": "离散分拣，边沿触发 + 区间判定，考查区间比较与边沿检测。"
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "箱号范围合法。",
+      "formula": "G(binSel >= 1 && binSel <= 3)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "区间分拣",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "height": 5.0,
+            "risingSort": true
+          },
+          "expect": {
+            "binSel": 1,
+            "sortPulse": true
+          }
+        },
+        {
+          "inputs": {
+            "height": 15.0,
+            "risingSort": true
+          },
+          "expect": {
+            "binSel": 2,
+            "sortPulse": true
+          }
+        },
+        {
+          "inputs": {
+            "height": 25.0,
+            "risingSort": true
+          },
+          "expect": {
+            "binSel": 3,
+            "sortPulse": true
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "HeightSort",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK HeightSort\nVAR_INPUT\n    height : REAL;\n    risingSort : BOOL;\nEND_VAR\nVAR_OUTPUT\n    binSel : INT;\n    sortPulse : BOOL;\nEND_VAR\nVAR\n    prev : BOOL;\n    edge : BOOL;\nEND_VAR\n",
+        "implementation": "edge := risingSort AND NOT prev;\nprev := risingSort;\nsortPulse := edge;\nIF edge THEN\n    IF height < 10.0 THEN\n        binSel := 1;\n    ELSIF height <= 20.0 THEN\n        binSel := 2;\n    ELSE\n        binSel := 3;\n    END_IF\nEND_IF\n"
+      }
+    ]
+  }
+}

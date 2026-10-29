@@ -1,0 +1,105 @@
+{
+  "id": "self_easy_001",
+  "source": "self_built",
+  "difficulty": "easy",
+  "title": "两相交通信号灯",
+  "pou": {
+    "type": "function_block",
+    "name": "TrafficLight"
+  },
+  "requirement": {
+    "zh": "实现一个两相交通信号灯：南北绿灯亮 5 秒、东西绿灯亮 5 秒，两方向交替，任意时刻至多一个方向为绿灯。",
+    "en": "A two-phase traffic light: north-south green for 5s, east-west green for 5s, alternating; at most one direction is green at any time."
+  },
+  "interface": {
+    "duts": [],
+    "inouts": [],
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "NS_Green",
+        "type": "BOOL",
+        "desc": "南北绿灯"
+      },
+      {
+        "name": "EW_Green",
+        "type": "BOOL",
+        "desc": "东西绿灯"
+      }
+    ]
+  },
+  "meta": {
+    "scenario": "离散逻辑/定时器；改编自常见交通灯控制题，考查自复位定时器与相位切换。"
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "两方向绿灯互斥。",
+      "formula": "G(!(NS_Green && EW_Green))"
+    },
+    {
+      "id": "P2",
+      "description": "至少一个方向为绿灯。",
+      "formula": "G(NS_Green || EW_Green)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "相位交替",
+      "scan_ms": 1000,
+      "steps": [
+        {
+          "inputs": {},
+          "expect": {
+            "NS_Green": true,
+            "EW_Green": false
+          }
+        },
+        {
+          "inputs": {},
+          "repeat": 4,
+          "expect": {
+            "NS_Green": true,
+            "EW_Green": false
+          }
+        },
+        {
+          "inputs": {},
+          "repeat": 1,
+          "expect": {
+            "NS_Green": false,
+            "EW_Green": true
+          }
+        },
+        {
+          "inputs": {},
+          "repeat": 4,
+          "expect": {
+            "NS_Green": false,
+            "EW_Green": true
+          }
+        },
+        {
+          "inputs": {},
+          "repeat": 1,
+          "expect": {
+            "NS_Green": true,
+            "EW_Green": false
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "TrafficLight",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK TrafficLight\nVAR_OUTPUT\n    NS_Green : BOOL;\n    EW_Green : BOOL;\nEND_VAR\nVAR\n    phase : INT := 0;\n    timer : TON;\nEND_VAR\n",
+        "implementation": "timer(IN := NOT timer.Q, PT := T#5s);\nIF timer.Q THEN\n    phase := 1 - phase;\nEND_IF\nIF phase = 0 THEN\n    NS_Green := TRUE;\n    EW_Green := FALSE;\nELSE\n    NS_Green := FALSE;\n    EW_Green := TRUE;\nEND_IF\n"
+      }
+    ]
+  }
+}

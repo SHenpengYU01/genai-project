@@ -1,0 +1,143 @@
+{
+  "id": "self_easy_003",
+  "source": "self_built",
+  "difficulty": "easy",
+  "title": "自动门控制",
+  "pou": {
+    "type": "function_block",
+    "name": "AutoDoor"
+  },
+  "requirement": {
+    "zh": "控制自动门：感应到人时开门，完全开启后保持 3 秒再关门；关门过程中若再次感应到人或检测到障碍物则重新开门。",
+    "en": "Control an automatic door: open on presence, hold 3s after fully open, then close; if presence or an obstacle is detected while closing, reopen."
+  },
+  "interface": {
+    "duts": [],
+    "inouts": [],
+    "inputs": [
+      {
+        "name": "presence",
+        "type": "BOOL",
+        "desc": "有人感应"
+      },
+      {
+        "name": "openLimit",
+        "type": "BOOL",
+        "desc": "开到位"
+      },
+      {
+        "name": "closeLimit",
+        "type": "BOOL",
+        "desc": "关到位"
+      },
+      {
+        "name": "obstacle",
+        "type": "BOOL",
+        "desc": "障碍物"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "openCmd",
+        "type": "BOOL",
+        "desc": "开门命令"
+      },
+      {
+        "name": "closeCmd",
+        "type": "BOOL",
+        "desc": "关门命令"
+      }
+    ]
+  },
+  "meta": {
+    "scenario": "门控/离散逻辑，含延时与障碍物重开，考查状态机与定时器。"
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "开门与关门互斥。",
+      "formula": "G(!(openCmd && closeCmd))"
+    },
+    {
+      "id": "P2",
+      "description": "有人时开门。",
+      "formula": "G(presence -> openCmd)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "开门保持后关门",
+      "scan_ms": 1000,
+      "steps": [
+        {
+          "inputs": {
+            "presence": true,
+            "openLimit": false,
+            "closeLimit": false,
+            "obstacle": false
+          },
+          "expect": {
+            "openCmd": true,
+            "closeCmd": false
+          }
+        },
+        {
+          "inputs": {
+            "presence": false,
+            "openLimit": true,
+            "closeLimit": false,
+            "obstacle": false
+          },
+          "expect": {
+            "openCmd": true,
+            "closeCmd": false
+          }
+        },
+        {
+          "inputs": {
+            "presence": false,
+            "openLimit": true,
+            "closeLimit": false,
+            "obstacle": false
+          },
+          "repeat": 3,
+          "expect": {
+            "openCmd": false,
+            "closeCmd": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "关门遇障碍重开",
+      "scan_ms": 1000,
+      "steps": [
+        {
+          "inputs": {
+            "presence": false,
+            "openLimit": false,
+            "closeLimit": false,
+            "obstacle": true
+          },
+          "expect": {
+            "openCmd": true,
+            "closeCmd": false
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "AutoDoor",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK AutoDoor\nVAR_INPUT\n    presence : BOOL;\n    openLimit : BOOL;\n    closeLimit : BOOL;\n    obstacle : BOOL;\nEND_VAR\nVAR_OUTPUT\n    openCmd : BOOL;\n    closeCmd : BOOL;\nEND_VAR\nVAR\n    stage : INT := 0;\n    hold : TON;\nEND_VAR\n",
+        "implementation": "openCmd := FALSE;\ncloseCmd := FALSE;\nCASE stage OF\n0:\n    IF presence THEN\n        stage := 1;\n    END_IF\n1:\n    openCmd := TRUE;\n    IF openLimit THEN\n        stage := 2;\n    END_IF\n2:\n    IF presence OR obstacle THEN\n        stage := 1;\n    ELSE\n        hold(IN := TRUE, PT := T#3s);\n        IF hold.Q THEN\n            stage := 3;\n        END_IF\n    END_IF\n3:\n    closeCmd := TRUE;\n    IF presence OR obstacle THEN\n        stage := 1;\n        hold(IN := FALSE, PT := T#3s);\n    ELSIF closeLimit THEN\n        stage := 0;\n    END_IF\nEND_CASE\n"
+      }
+    ]
+  }
+}

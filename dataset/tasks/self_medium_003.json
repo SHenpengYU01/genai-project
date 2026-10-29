@@ -1,0 +1,126 @@
+{
+  "id": "self_medium_003",
+  "source": "self_built",
+  "difficulty": "medium",
+  "title": "报警闭锁与确认复位",
+  "pou": {
+    "type": "function_block",
+    "name": "AlarmLatch"
+  },
+  "requirement": {
+    "zh": "报警输入 alarmIn 的上升沿触发闭锁报警 alarmLatched，并保持到复位 reset；acknowledge 为 TRUE 时静音 horn 但保留报警指示，直到 reset 清除。",
+    "en": "A rising edge of alarmIn latches alarmLatched until reset. acknowledge silences horn but keeps the alarm indication until reset clears it."
+  },
+  "interface": {
+    "duts": [],
+    "inouts": [],
+    "inputs": [
+      {
+        "name": "alarmIn",
+        "type": "BOOL",
+        "desc": "报警输入"
+      },
+      {
+        "name": "acknowledge",
+        "type": "BOOL",
+        "desc": "确认"
+      },
+      {
+        "name": "reset",
+        "type": "BOOL",
+        "desc": "复位"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "alarmLatched",
+        "type": "BOOL",
+        "desc": "闭锁报警指示"
+      },
+      {
+        "name": "horn",
+        "type": "BOOL",
+        "desc": "声光报警(确认后静音)"
+      }
+    ]
+  },
+  "meta": {
+    "scenario": "报警管理，闭锁 + 确认 + 复位，考查边沿闭锁与优先级。"
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "确认后静音。",
+      "formula": "G(acknowledge -> !horn)"
+    },
+    {
+      "id": "P2",
+      "description": "复位清除报警。",
+      "formula": "G(reset -> !alarmLatched)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "报警闭锁确认复位",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "alarmIn": false,
+            "acknowledge": false,
+            "reset": false
+          },
+          "expect": {
+            "alarmLatched": false,
+            "horn": false
+          }
+        },
+        {
+          "inputs": {
+            "alarmIn": true,
+            "acknowledge": false,
+            "reset": false
+          },
+          "expect": {
+            "alarmLatched": true,
+            "horn": true
+          }
+        },
+        {
+          "inputs": {
+            "alarmIn": false,
+            "acknowledge": true,
+            "reset": false
+          },
+          "expect": {
+            "alarmLatched": true,
+            "horn": false
+          }
+        },
+        {
+          "inputs": {
+            "alarmIn": false,
+            "acknowledge": false,
+            "reset": true
+          },
+          "expect": {
+            "alarmLatched": false,
+            "horn": false
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "AlarmLatch",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK AlarmLatch\nVAR_INPUT\n    alarmIn : BOOL;\n    acknowledge : BOOL;\n    reset : BOOL;\nEND_VAR\nVAR_OUTPUT\n    alarmLatched : BOOL;\n    horn : BOOL;\nEND_VAR\nVAR\n    prev : BOOL;\n    edge : BOOL;\nEND_VAR\n",
+        "implementation": "edge := alarmIn AND NOT prev;\nprev := alarmIn;\nIF reset THEN\n    alarmLatched := FALSE;\nELSIF edge THEN\n    alarmLatched := TRUE;\nEND_IF\nhorn := alarmLatched AND NOT acknowledge;\n"
+      }
+    ]
+  }
+}

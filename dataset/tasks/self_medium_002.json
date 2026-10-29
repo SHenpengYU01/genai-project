@@ -1,0 +1,123 @@
+{
+  "id": "self_medium_002",
+  "source": "self_built",
+  "difficulty": "medium",
+  "title": "主备泵交替运行",
+  "pou": {
+    "type": "function_block",
+    "name": "PumpAlternation"
+  },
+  "requirement": {
+    "zh": "两台水泵一用一备：每次启动请求 start 上升沿时，轮流让 1 号或 2 号泵作为主泵运行；stop 时全部停止。若主泵运行反馈在启动后 2 秒内未到位，则切换备用泵。",
+    "en": "Two pumps in duty/standby: each start rising edge alternates the lead pump (1 or 2). stop stops all. If the lead pump run feedback is absent within 2s of start, switch to the standby pump."
+  },
+  "interface": {
+    "duts": [],
+    "inouts": [],
+    "inputs": [
+      {
+        "name": "start",
+        "type": "BOOL",
+        "desc": "启动请求"
+      },
+      {
+        "name": "stop",
+        "type": "BOOL",
+        "desc": "停止"
+      },
+      {
+        "name": "pump1Feedback",
+        "type": "BOOL",
+        "desc": "1 号泵运行反馈"
+      },
+      {
+        "name": "pump2Feedback",
+        "type": "BOOL",
+        "desc": "2 号泵运行反馈"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "pump1Run",
+        "type": "BOOL",
+        "desc": "1 号泵运行"
+      },
+      {
+        "name": "pump2Run",
+        "type": "BOOL",
+        "desc": "2 号泵运行"
+      }
+    ]
+  },
+  "meta": {
+    "scenario": "流程行业主备切换，含运行反馈与定时切泵，考查边沿 + 定时 + 切换逻辑。"
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "停止时两泵均停。",
+      "formula": "G(stop -> (!pump1Run && !pump2Run))"
+    },
+    {
+      "id": "P2",
+      "description": "至多一泵运行(主备)。",
+      "formula": "G(!(pump1Run && pump2Run))"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "交替启动",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "start": true,
+            "stop": false,
+            "pump1Feedback": true,
+            "pump2Feedback": false
+          },
+          "expect": {
+            "pump1Run": true,
+            "pump2Run": false
+          }
+        },
+        {
+          "inputs": {
+            "start": false,
+            "stop": true,
+            "pump1Feedback": false,
+            "pump2Feedback": false
+          },
+          "expect": {
+            "pump1Run": false,
+            "pump2Run": false
+          }
+        },
+        {
+          "inputs": {
+            "start": true,
+            "stop": false,
+            "pump1Feedback": false,
+            "pump2Feedback": true
+          },
+          "expect": {
+            "pump1Run": false,
+            "pump2Run": true
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "PumpAlternation",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK PumpAlternation\nVAR_INPUT\n    start : BOOL;\n    stop : BOOL;\n    pump1Feedback : BOOL;\n    pump2Feedback : BOOL;\nEND_VAR\nVAR_OUTPUT\n    pump1Run : BOOL;\n    pump2Run : BOOL;\nEND_VAR\nVAR\n    lead : INT := 1;\n    startPrev : BOOL;\n    startEdge : BOOL;\n    switchTof : TOF;\nEND_VAR\n",
+        "implementation": "startEdge := start AND NOT startPrev;\nstartPrev := start;\nIF stop THEN\n    pump1Run := FALSE;\n    pump2Run := FALSE;\n    lead := 1;\nELSIF startEdge THEN\n    IF lead = 1 THEN\n        pump1Run := TRUE;\n        pump2Run := FALSE;\n    ELSE\n        pump1Run := FALSE;\n        pump2Run := TRUE;\n    END_IF\n    lead := 3 - lead;\nEND_IF\nswitchTof(IN := (pump1Run AND NOT pump1Feedback) OR (pump2Run AND NOT pump2Feedback),\n          PT := T#2s);\nIF switchTof.Q THEN\n    IF pump1Run THEN\n        pump1Run := FALSE;\n        pump2Run := TRUE;\n    ELSIF pump2Run THEN\n        pump2Run := FALSE;\n        pump1Run := TRUE;\n    END_IF\nEND_IF\n"
+      }
+    ]
+  }
+}

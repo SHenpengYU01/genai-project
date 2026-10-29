@@ -1,0 +1,144 @@
+{
+  "id": "self_hard_001",
+  "source": "self_built",
+  "difficulty": "hard",
+  "title": "停车场车位计数",
+  "pou": {
+    "type": "function_block",
+    "name": "ParkingLot"
+  },
+  "requirement": {
+    "zh": "停车场最多 capacity 个车位。entrySensor 上升沿计数加 1，exitSensor 上升沿计数减 1；count 达到 capacity 时 fullIndicator 为 TRUE 且禁止 entryGate 开闸。计数不得为负。",
+    "en": "A parking lot holds up to capacity cars. entrySensor rising edge increments, exitSensor rising edge decrements. When count reaches capacity, fullIndicator is TRUE and entryGate is blocked. count must never be negative."
+  },
+  "interface": {
+    "duts": [],
+    "inouts": [],
+    "inputs": [
+      {
+        "name": "entrySensor",
+        "type": "BOOL",
+        "desc": "入口检测"
+      },
+      {
+        "name": "exitSensor",
+        "type": "BOOL",
+        "desc": "出口检测"
+      },
+      {
+        "name": "capacity",
+        "type": "INT",
+        "desc": "总车位"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "count",
+        "type": "INT",
+        "desc": "当前车辆数"
+      },
+      {
+        "name": "fullIndicator",
+        "type": "BOOL",
+        "desc": "满位指示"
+      },
+      {
+        "name": "entryGate",
+        "type": "BOOL",
+        "desc": "入口闸机"
+      }
+    ]
+  },
+  "meta": {
+    "scenario": "离散计数与上限约束，考查双向计数、边界约束与互斥。"
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "计数不越界。",
+      "formula": "G(count >= 0 && count <= capacity)"
+    },
+    {
+      "id": "P2",
+      "description": "满位时禁止入场。",
+      "formula": "G(count >= capacity -> !entryGate)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "进出计数与满位",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "entrySensor": false,
+            "exitSensor": false,
+            "capacity": 3
+          },
+          "expect": {
+            "count": 0,
+            "fullIndicator": false,
+            "entryGate": true
+          }
+        },
+        {
+          "inputs": {
+            "entrySensor": true,
+            "exitSensor": false,
+            "capacity": 3
+          },
+          "expect": {
+            "count": 1,
+            "entryGate": true
+          }
+        },
+        {
+          "inputs": {
+            "entrySensor": true,
+            "exitSensor": false,
+            "capacity": 3
+          },
+          "expect": {
+            "count": 2
+          }
+        },
+        {
+          "inputs": {
+            "entrySensor": true,
+            "exitSensor": false,
+            "capacity": 3
+          },
+          "expect": {
+            "count": 3,
+            "fullIndicator": true,
+            "entryGate": false
+          }
+        },
+        {
+          "inputs": {
+            "entrySensor": false,
+            "exitSensor": true,
+            "capacity": 3
+          },
+          "expect": {
+            "count": 2,
+            "fullIndicator": false,
+            "entryGate": true
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "ParkingLot",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK ParkingLot\nVAR_INPUT\n    entrySensor : BOOL;\n    exitSensor : BOOL;\n    capacity : INT;\nEND_VAR\nVAR_OUTPUT\n    count : INT;\n    fullIndicator : BOOL;\n    entryGate : BOOL;\nEND_VAR\nVAR\n    enPrev : BOOL;\n    exPrev : BOOL;\n    enEdge : BOOL;\n    exEdge : BOOL;\nEND_VAR\n",
+        "implementation": "enEdge := entrySensor AND NOT enPrev;\nexEdge := exitSensor AND NOT exPrev;\nenPrev := entrySensor;\nexPrev := exitSensor;\nIF enEdge AND NOT exEdge THEN\n    IF count < capacity THEN\n        count := count + 1;\n    END_IF\nELSIF exEdge AND NOT enEdge THEN\n    IF count > 0 THEN\n        count := count - 1;\n    END_IF\nEND_IF\nfullIndicator := (count >= capacity);\nentryGate := NOT fullIndicator;\n"
+      }
+    ]
+  }
+}

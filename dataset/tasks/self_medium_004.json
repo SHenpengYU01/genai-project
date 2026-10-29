@@ -1,0 +1,125 @@
+{
+  "id": "self_medium_004",
+  "source": "self_built",
+  "difficulty": "medium",
+  "title": "星三角降压启动",
+  "pou": {
+    "type": "function_block",
+    "name": "StarDelta"
+  },
+  "requirement": {
+    "zh": "电机星三角降压启动：start 上升沿先闭合主接触器与星形接触器，运行 5 秒后切换为主接触器与三角形接触器；stop 或热过载 overload 时立即断开所有接触器。",
+    "en": "Star-delta start: a start rising edge closes main + star contactors for 5s, then switches to main + delta. stop or overload opens all contactors."
+  },
+  "interface": {
+    "duts": [],
+    "inouts": [],
+    "inputs": [
+      {
+        "name": "start",
+        "type": "BOOL",
+        "desc": "启动"
+      },
+      {
+        "name": "stop",
+        "type": "BOOL",
+        "desc": "停止"
+      },
+      {
+        "name": "overload",
+        "type": "BOOL",
+        "desc": "热过载"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "mainContactor",
+        "type": "BOOL",
+        "desc": "主接触器"
+      },
+      {
+        "name": "starContactor",
+        "type": "BOOL",
+        "desc": "星形接触器"
+      },
+      {
+        "name": "deltaContactor",
+        "type": "BOOL",
+        "desc": "三角形接触器"
+      }
+    ]
+  },
+  "meta": {
+    "scenario": "电机启动控制，星三角切换 + 过载保护，考查定时切换与互锁。"
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "星形与三角形互锁。",
+      "formula": "G(!(starContactor && deltaContactor))"
+    },
+    {
+      "id": "P2",
+      "description": "过载时全部断开。",
+      "formula": "G(overload -> (!mainContactor && !starContactor && !deltaContactor))"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "星形运行 5s 后切三角形",
+      "scan_ms": 1000,
+      "steps": [
+        {
+          "inputs": {
+            "start": true,
+            "stop": false,
+            "overload": false
+          },
+          "expect": {
+            "mainContactor": true,
+            "starContactor": true,
+            "deltaContactor": false
+          }
+        },
+        {
+          "inputs": {
+            "start": false,
+            "stop": false,
+            "overload": false
+          },
+          "repeat": 4,
+          "expect": {
+            "mainContactor": true,
+            "starContactor": true,
+            "deltaContactor": false
+          }
+        },
+        {
+          "inputs": {
+            "start": false,
+            "stop": false,
+            "overload": false
+          },
+          "repeat": 1,
+          "expect": {
+            "mainContactor": true,
+            "starContactor": false,
+            "deltaContactor": true
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "StarDelta",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK StarDelta\nVAR_INPUT\n    start : BOOL;\n    stop : BOOL;\n    overload : BOOL;\nEND_VAR\nVAR_OUTPUT\n    mainContactor : BOOL;\n    starContactor : BOOL;\n    deltaContactor : BOOL;\nEND_VAR\nVAR\n    stage : INT := 0;\n    startPrev : BOOL;\n    startEdge : BOOL;\n    starTon : TON;\nEND_VAR\n",
+        "implementation": "startEdge := start AND NOT startPrev;\nstartPrev := start;\nIF stop OR overload THEN\n    stage := 0;\n    mainContactor := FALSE;\n    starContactor := FALSE;\n    deltaContactor := FALSE;\n    starTon(IN := FALSE, PT := T#5s);\nELSIF startEdge THEN\n    stage := 1;\n    mainContactor := TRUE;\n    starContactor := TRUE;\n    deltaContactor := FALSE;\nEND_IF\nIF stage = 1 THEN\n    starTon(IN := TRUE, PT := T#5s);\n    IF starTon.Q THEN\n        stage := 2;\n        starContactor := FALSE;\n        deltaContactor := TRUE;\n    END_IF\nEND_IF\n"
+      }
+    ]
+  }
+}

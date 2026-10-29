@@ -1,0 +1,126 @@
+{
+  "id": "self_hard_003",
+  "source": "self_built",
+  "difficulty": "hard",
+  "title": "三层电梯控制",
+  "pou": {
+    "type": "function_block",
+    "name": "Elevator"
+  },
+  "requirement": {
+    "zh": "简化三层电梯：目标楼层 targetFloor(1..3) 的上升沿触发；电梯运行到目标楼层(对应 floorSensor 为 TRUE) 后停止并开门 3 秒。上下方向由目标楼层与当前楼层比较决定。",
+    "en": "Simplified 3-floor elevator: a rising edge of targetFloor(1..3) starts motion; the car stops when the target floor sensor is active, then opens the door 3s. Direction is up/down by comparing target and current floor."
+  },
+  "interface": {
+    "duts": [],
+    "inouts": [],
+    "inputs": [
+      {
+        "name": "targetFloor",
+        "type": "INT",
+        "desc": "目标楼层 1..3"
+      },
+      {
+        "name": "floorSensor1",
+        "type": "BOOL",
+        "desc": "1 层到位"
+      },
+      {
+        "name": "floorSensor2",
+        "type": "BOOL",
+        "desc": "2 层到位"
+      },
+      {
+        "name": "floorSensor3",
+        "type": "BOOL",
+        "desc": "3 层到位"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "motorUp",
+        "type": "BOOL",
+        "desc": "上行"
+      },
+      {
+        "name": "motorDown",
+        "type": "BOOL",
+        "desc": "下行"
+      },
+      {
+        "name": "doorOpen",
+        "type": "BOOL",
+        "desc": "开门"
+      }
+    ]
+  },
+  "meta": {
+    "scenario": "运动控制电梯，目标楼层 + 到位检测 + 开门延时，考查状态机与方向判定。"
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "上下行互斥。",
+      "formula": "G(!(motorUp && motorDown))"
+    },
+    {
+      "id": "P2",
+      "description": "开门时电梯不运动。",
+      "formula": "G(doorOpen -> (!motorUp && !motorDown))"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "上行到目标层并开门",
+      "scan_ms": 1000,
+      "steps": [
+        {
+          "inputs": {
+            "targetFloor": 3,
+            "floorSensor1": true,
+            "floorSensor2": false,
+            "floorSensor3": false
+          },
+          "expect": {}
+        },
+        {
+          "inputs": {
+            "targetFloor": 3,
+            "floorSensor1": false,
+            "floorSensor2": true,
+            "floorSensor3": false
+          },
+          "expect": {
+            "motorUp": true,
+            "motorDown": false,
+            "doorOpen": false
+          }
+        },
+        {
+          "inputs": {
+            "targetFloor": 3,
+            "floorSensor1": false,
+            "floorSensor2": false,
+            "floorSensor3": true
+          },
+          "expect": {
+            "motorUp": false,
+            "doorOpen": true
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "Elevator",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK Elevator\nVAR_INPUT\n    targetFloor : INT;\n    floorSensor1 : BOOL;\n    floorSensor2 : BOOL;\n    floorSensor3 : BOOL;\nEND_VAR\nVAR_OUTPUT\n    motorUp : BOOL;\n    motorDown : BOOL;\n    doorOpen : BOOL;\nEND_VAR\nVAR\n    current : INT := 1;\n    stage : INT := 0;\n    doorTon : TON;\nEND_VAR\n",
+        "implementation": "motorUp := FALSE;\nmotorDown := FALSE;\ndoorOpen := FALSE;\nCASE stage OF\n0:\n    IF floorSensor1 THEN current := 1;\n    ELSIF floorSensor2 THEN current := 2;\n    ELSIF floorSensor3 THEN current := 3;\n    END_IF\n    IF targetFloor <> current THEN\n        IF targetFloor > current THEN\n            motorUp := TRUE;\n        ELSE\n            motorDown := TRUE;\n        END_IF\n        IF (targetFloor = 1 AND floorSensor1) OR (targetFloor = 2 AND floorSensor2)\n            OR (targetFloor = 3 AND floorSensor3) THEN\n            stage := 1;\n        END_IF\n    END_IF\n1:\n    doorOpen := TRUE;\n    doorTon(IN := TRUE, PT := T#3s);\n    IF doorTon.Q THEN\n        stage := 0;\n    END_IF\nEND_CASE\n"
+      }
+    ]
+  }
+}

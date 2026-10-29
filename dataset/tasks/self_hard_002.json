@@ -1,0 +1,123 @@
+{
+  "id": "self_hard_002",
+  "source": "self_built",
+  "difficulty": "hard",
+  "title": "恒压供水多泵投切",
+  "pou": {
+    "type": "function_block",
+    "name": "ConstPressure"
+  },
+  "requirement": {
+    "zh": "恒压供水由 3 台泵组成。压力低于 setpoint-deadband 时逐台增加运行泵数，高于 setpoint+deadband 时逐台减少；运行泵数 0..3。",
+    "en": "Constant-pressure supply with 3 pumps. Add pumps one by one when pressure is below setpoint-deadband; shed pumps when above setpoint+deadband; running pump count stays 0..3."
+  },
+  "interface": {
+    "duts": [],
+    "inouts": [],
+    "inputs": [
+      {
+        "name": "pressure",
+        "type": "REAL",
+        "desc": "管网压力"
+      },
+      {
+        "name": "setpoint",
+        "type": "REAL",
+        "desc": "设定压力"
+      },
+      {
+        "name": "deadband",
+        "type": "REAL",
+        "desc": "死区"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "pump1Run",
+        "type": "BOOL",
+        "desc": "1 号泵"
+      },
+      {
+        "name": "pump2Run",
+        "type": "BOOL",
+        "desc": "2 号泵"
+      },
+      {
+        "name": "pump3Run",
+        "type": "BOOL",
+        "desc": "3 号泵"
+      }
+    ]
+  },
+  "meta": {
+    "scenario": "流程行业恒压控制，多泵分级投切 + 死区，考查分级逻辑与计数。"
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "压力过低时至少一台泵运行。",
+      "formula": "G(pressure < setpoint - deadband -> (pump1Run || pump2Run || pump3Run))"
+    },
+    {
+      "id": "P2",
+      "description": "压力过高时全停。",
+      "formula": "G(pressure > setpoint + deadband -> (!pump1Run && !pump2Run && !pump3Run))"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "分级投切",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "pressure": 8.0,
+            "setpoint": 10.0,
+            "deadband": 1.0
+          },
+          "expect": {
+            "pump1Run": true,
+            "pump2Run": false,
+            "pump3Run": false
+          }
+        },
+        {
+          "inputs": {
+            "pressure": 8.0,
+            "setpoint": 10.0,
+            "deadband": 1.0
+          },
+          "expect": {
+            "pump1Run": true,
+            "pump2Run": true,
+            "pump3Run": false
+          }
+        },
+        {
+          "inputs": {
+            "pressure": 8.0,
+            "setpoint": 10.0,
+            "deadband": 1.0
+          },
+          "expect": {
+            "pump1Run": true,
+            "pump2Run": true,
+            "pump3Run": true
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "ConstPressure",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK ConstPressure\nVAR_INPUT\n    pressure : REAL;\n    setpoint : REAL;\n    deadband : REAL;\nEND_VAR\nVAR_OUTPUT\n    pump1Run : BOOL;\n    pump2Run : BOOL;\n    pump3Run : BOOL;\nEND_VAR\nVAR\n    n : INT := 0;\n    delayTon : TON;\nEND_VAR\n",
+        "implementation": "IF pressure < setpoint - deadband AND n < 3 THEN\n    n := n + 1;\nELSIF pressure > setpoint + deadband AND n > 0 THEN\n    n := n - 1;\nEND_IF\npump1Run := (n >= 1);\npump2Run := (n >= 2);\npump3Run := (n >= 3);\n"
+      }
+    ]
+  }
+}

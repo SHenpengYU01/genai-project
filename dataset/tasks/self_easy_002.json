@@ -1,0 +1,142 @@
+{
+  "id": "self_easy_002",
+  "source": "self_built",
+  "difficulty": "easy",
+  "title": "水箱液位控制与高高报警",
+  "pou": {
+    "type": "function_block",
+    "name": "TankLevel"
+  },
+  "requirement": {
+    "zh": "控制水箱：液位低于 lowLevel 时启动水泵，高于 highLevel 时停止水泵(滞环)；液位超过 highHighLevel 时输出高高报警。",
+    "en": "Control a tank: start the pump when level drops below lowLevel, stop it when level rises above highLevel (hysteresis); alarm when level exceeds highHighLevel."
+  },
+  "interface": {
+    "duts": [],
+    "inouts": [],
+    "inputs": [
+      {
+        "name": "level",
+        "type": "REAL",
+        "desc": "液位"
+      },
+      {
+        "name": "lowLevel",
+        "type": "REAL",
+        "desc": "低液位启动点"
+      },
+      {
+        "name": "highLevel",
+        "type": "REAL",
+        "desc": "高液位停止点"
+      },
+      {
+        "name": "highHighLevel",
+        "type": "REAL",
+        "desc": "高高报警点"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "pumpOn",
+        "type": "BOOL",
+        "desc": "水泵运行"
+      },
+      {
+        "name": "highHighAlarm",
+        "type": "BOOL",
+        "desc": "高高报警"
+      }
+    ]
+  },
+  "meta": {
+    "scenario": "流程行业液位控制，带滞环与超限报警，考查滞环保持逻辑。"
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "超过高高报警点必须报警。",
+      "formula": "G(level > highHighLevel -> highHighAlarm)"
+    },
+    {
+      "id": "P2",
+      "description": "低于启动点启动水泵。",
+      "formula": "G(level < lowLevel -> pumpOn)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "滞环启停",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "level": 5.0,
+            "lowLevel": 10.0,
+            "highLevel": 20.0,
+            "highHighLevel": 25.0
+          },
+          "expect": {
+            "pumpOn": true,
+            "highHighAlarm": false
+          }
+        },
+        {
+          "inputs": {
+            "level": 15.0,
+            "lowLevel": 10.0,
+            "highLevel": 20.0,
+            "highHighLevel": 25.0
+          },
+          "expect": {
+            "pumpOn": true,
+            "highHighAlarm": false
+          }
+        },
+        {
+          "inputs": {
+            "level": 22.0,
+            "lowLevel": 10.0,
+            "highLevel": 20.0,
+            "highHighLevel": 25.0
+          },
+          "expect": {
+            "pumpOn": false,
+            "highHighAlarm": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "高高报警",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "level": 26.0,
+            "lowLevel": 10.0,
+            "highLevel": 20.0,
+            "highHighLevel": 25.0
+          },
+          "expect": {
+            "highHighAlarm": true,
+            "pumpOn": false
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "TankLevel",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK TankLevel\nVAR_INPUT\n    level : REAL;\n    lowLevel : REAL;\n    highLevel : REAL;\n    highHighLevel : REAL;\nEND_VAR\nVAR_OUTPUT\n    pumpOn : BOOL;\n    highHighAlarm : BOOL;\nEND_VAR\n",
+        "implementation": "IF level < lowLevel THEN\n    pumpOn := TRUE;\nELSIF level > highLevel THEN\n    pumpOn := FALSE;\nEND_IF\nhighHighAlarm := (level > highHighLevel);\n"
+      }
+    ]
+  }
+}
