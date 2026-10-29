@@ -1,2 +1,54 @@
-# 面向CODESYS平台的ST代码自动生成系统
+# 面向 CODESYS 平台的 ST 代码自动生成系统
 
+自研 Coding Agent + 实验框架：生成 IEC 61131-3 结构化文本（ST）→ CODESYS 编译 →
+CODESYS 仿真行为测试 → 结构化修复，并在 30 道 PLC 编程题上做多模型对比评测。
+
+## 仓库结构
+
+| 目录 | 内容 |
+|------|------|
+| `tool/` | CODESYS 编译服务（CPython 客户端 + IronPython worker + 模板工程），DUT/Standard 库支持 |
+| `tester/` | 行为测试：ST 自测驱动生成 + CODESYS 仿真执行（在线 API） |
+| `dataset/` | 30 道题（20 公共 + 10 自建），含 LTL 规约、测试用例、可编译参考实现；schema 与校验脚本 |
+| `agent/` | 自研 ST 生成 Agent harness（LLM 客户端、提示、解析、编译/测试反馈循环） |
+| `experiments/` | 实验编排与指标汇总；`mocks/` 为离线自测用的脚本化模型输出 |
+| `公共题库.json` / `任务说明.md` | 原始题目与作业要求 |
+
+## 环境
+
+- Windows + CODESYS V3.5 SP22 Patch 4（x64），`CODESYS.exe` 在 PATH（Control Win V3 x64 模板）
+- Python 3.8+（仅标准库）
+
+## 快速开始
+
+```bash
+# 1) 编译服务自检（7 个样例，含故意报错项）
+tool\run_tests.bat
+
+# 2) 数据集质量门槛：参考实现必须编译通过
+python dataset/check_references.py
+
+# 3) 数据集自检：参考实现必须通过自己的测试用例（CODESYS 仿真）
+python tester/run_all.py
+
+# 4) Agent 离线自测（无需 API key，回放 mock 输出）
+python experiments/build_mocks.py
+python experiments/run_eval.py --mock reference --limit 3 --outdir experiments/runs/mock_ref
+
+# 5) 正式实验（需 DEEPSEEK_API_KEY / DASHSCOPE_API_KEY）
+python experiments/run_eval.py --models deepseek,qwen --outdir experiments/runs/agent_2models
+```
+
+## 实验指标
+
+- 编译通过率：首次（第 1 轮）与修改 n 次后的通过率
+- 测试通过率：按行为测试用例（CODESYS 仿真）统计
+- 资源消耗：token 用量、估算费用、墙钟时间、平均修复轮次
+- 工具/基础设施故障（`tool_error`）单列，不计入模型能力
+
+## 已知环境约束（实测）
+
+- 脚本化创建的工程需手动引用 Standard 库（TON/R_TRIG 等），编译服务已自动处理
+- 标识符不能以下划线开头；`BIT`、`SUB` 为保留字
+- 字符串下标 0 基；`FOR` 递减用 `TO ... BY -1`（无 `DOWNTO`）
+- 不支持 `VARIANT` / `__VARCINFO`（FIFO 题已相应改编为 `INT` 元素 + `ARRAY[*]`）

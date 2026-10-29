@@ -1,0 +1,6 @@
+{
+ "responses": [
+  "<<<POU name=ConstPressure kind=function_block>>>\nFUNCTION_BLOCK ConstPressure\nVAR_INPUT\n    pressure : REAL;\n    setpoint : REAL;\n    deadband : REAL;\nEND_VAR\nVAR_OUTPUT\n    pump1Run : BOOL;\n    pump2Run : BOOL;\n    pump3Run : BOOL;\nEND_VAR\nVAR\n    n : INT := 0;\n    delayTon : TON;\nEND_VAR\n<<<IMPL>>>\nIF pressure < setpoint - deadband AND n < 3 THEN\n    n := n + 1;\nELSIF pressure > setpoint + deadband AND n > 0 THEN\n    n := n - 1;\nEND_IF\npump1Run := (n >= 1);\npump2Run := (n >= 2);\npump3Run := (n >= 3);\n(* intentional behavior bug for mock *)\npump1Run := FALSE;\npump2Run := FALSE;\npump3Run := FALSE;\n<<<END>>>",
+  "<<<POU name=ConstPressure kind=function_block>>>\nFUNCTION_BLOCK ConstPressure\nVAR_INPUT\n    pressure : REAL;\n    setpoint : REAL;\n    deadband : REAL;\nEND_VAR\nVAR_OUTPUT\n    pump1Run : BOOL;\n    pump2Run : BOOL;\n    pump3Run : BOOL;\nEND_VAR\nVAR\n    n : INT := 0;\n    delayTon : TON;\nEND_VAR\n<<<IMPL>>>\nIF pressure < setpoint - deadband AND n < 3 THEN\n    n := n + 1;\nELSIF pressure > setpoint + deadband AND n > 0 THEN\n    n := n - 1;\nEND_IF\npump1Run := (n >= 1);\npump2Run := (n >= 2);\npump3Run := (n >= 3);\n<<<END>>>"
+ ]
+}

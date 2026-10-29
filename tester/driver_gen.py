@@ -160,6 +160,13 @@ def generate(task):
     for e in inouts:
         a("    io_%s : ARRAY[0..%d] OF %s;"
           % (e['name'], len(cases) - 1, io_type[e['name']]))
+    # scalar values captured at the first failing step (feedback for the agent)
+    scalars = [(e['name'], e['type'], "fb[tc].%s" % e['name'])
+               for e in outputs if out_info[e['name']]['kind'] == 'scalar']
+    scalars += [(e['name'], io_type[e['name']], "io_%s[tc]" % e['name'])
+                for e in inouts if io_info[e['name']]['kind'] == 'scalar']
+    for n, t, _ in scalars:
+        a("    fail_%s : %s;" % (n, t))
     a("END_VAR")
     a("")
     a("IF NOT done THEN")
@@ -226,6 +233,8 @@ def generate(task):
     a("            IF firstFailTc < 0 THEN")
     a("                firstFailTc := tc;")
     a("                firstFailStep := step;")
+    for n, _, src in scalars:
+        a("                fail_%s := %s;" % (n, src))
     a("            END_IF")
     a("        ELSE")
     a("            passCnt := passCnt + 1;")

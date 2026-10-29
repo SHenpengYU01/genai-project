@@ -17,6 +17,9 @@ __pycache__/
 tool/work/
 tester/work/
 
+# 实验运行日志（结果按需单独保存/汇总进报告）
+experiments/runs/
+
 # 临时探测脚本
 tool/_probe*.py
 tool/_run_probe*.bat

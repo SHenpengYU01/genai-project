@@ -1,0 +1,5 @@
+{
+ "responses": [
+  "<<<POU name=ParkingLot kind=function_block>>>\nFUNCTION_BLOCK ParkingLot\nVAR_INPUT\n    entrySensor : BOOL;\n    exitSensor : BOOL;\n    capacity : INT;\nEND_VAR\nVAR_OUTPUT\n    count : INT;\n    fullIndicator : BOOL;\n    entryGate : BOOL;\nEND_VAR\nVAR\n    enPrev : BOOL;\n    exPrev : BOOL;\n    enEdge : BOOL;\n    exEdge : BOOL;\nEND_VAR\n<<<IMPL>>>\nenEdge := entrySensor AND NOT enPrev;\nexEdge := exitSensor AND NOT exPrev;\nenPrev := entrySensor;\nexPrev := exitSensor;\nIF enEdge AND NOT exEdge THEN\n    IF count < capacity THEN\n        count := count + 1;\n    END_IF\nELSIF exEdge AND NOT enEdge THEN\n    IF count > 0 THEN\n        count := count - 1;\n    END_IF\nEND_IF\nfullIndicator := (count >= capacity);\nentryGate := NOT fullIndicator;\n<<<END>>>"
+ ]
+}

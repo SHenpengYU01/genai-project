@@ -1,0 +1,6 @@
+{
+ "responses": [
+  "<<<POU name=AlarmLatch kind=function_block>>>\nFUNCTION_BLOCK AlarmLatch\nVAR_INPUT\n    alarmIn : BOOL;\n    acknowledge : BOOL;\n    reset : BOOL;\nEND_VAR\nVAR_OUTPUT\n    alarmLatched : BOOL;\n    horn : BOOL;\nEND_VAR\nVAR\n    prev : BOOL;\n    edge : BOOL;\nEND_VAR\n<<<IMPL>>>\nedge := alarmIn AND NOT prev;\nprev := alarmIn;\nIF reset THEN\n    alarmLatched := FALSE;\nELSIF edge THEN\n    alarmLatched := TRUE;\nEND_IF\nhorn := alarmLatched AND NOT acknowledge;\n(* intentional behavior bug for mock *)\nalarmLatched := FALSE;\nhorn := FALSE;\n<<<END>>>",
+  "<<<POU name=AlarmLatch kind=function_block>>>\nFUNCTION_BLOCK AlarmLatch\nVAR_INPUT\n    alarmIn : BOOL;\n    acknowledge : BOOL;\n    reset : BOOL;\nEND_VAR\nVAR_OUTPUT\n    alarmLatched : BOOL;\n    horn : BOOL;\nEND_VAR\nVAR\n    prev : BOOL;\n    edge : BOOL;\nEND_VAR\n<<<IMPL>>>\nedge := alarmIn AND NOT prev;\nprev := alarmIn;\nIF reset THEN\n    alarmLatched := FALSE;\nELSIF edge THEN\n    alarmLatched := TRUE;\nEND_IF\nhorn := alarmLatched AND NOT acknowledge;\n<<<END>>>"
+ ]
+}

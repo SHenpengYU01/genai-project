@@ -1,0 +1,6 @@
+{
+ "responses": [
+  "<<<POU name=HeightSort kind=function_block>>>\nFUNCTION_BLOCK HeightSort\nVAR_INPUT\n    height : REAL;\n    risingSort : BOOL;\nEND_VAR\nVAR_OUTPUT\n    binSel : INT;\n    sortPulse : BOOL;\nEND_VAR\nVAR\n    prev : BOOL;\n    edge : BOOL;\nEND_VAR\n<<<IMPL>>>\nedge := risingSort AND NOT prev;\nprev := risingSort;\nsortPulse := edge;\nIF edge THEN\n    IF height < 10.0 THEN\n        binSel := 1;\n    ELSIF height <= 20.0 THEN\n        binSel := 2;\n    ELSE\n        binSel := 3;\n    END_IF\nEND_IF\n(* intentional behavior bug for mock *)\nbinSel := 0;\nsortPulse := FALSE;\n<<<END>>>",
+  "<<<POU name=HeightSort kind=function_block>>>\nFUNCTION_BLOCK HeightSort\nVAR_INPUT\n    height : REAL;\n    risingSort : BOOL;\nEND_VAR\nVAR_OUTPUT\n    binSel : INT;\n    sortPulse : BOOL;\nEND_VAR\nVAR\n    prev : BOOL;\n    edge : BOOL;\nEND_VAR\n<<<IMPL>>>\nedge := risingSort AND NOT prev;\nprev := risingSort;\nsortPulse := edge;\nIF edge THEN\n    IF height < 10.0 THEN\n        binSel := 1;\n    ELSIF height <= 20.0 THEN\n        binSel := 2;\n    ELSE\n        binSel := 3;\n    END_IF\nEND_IF\n<<<END>>>"
+ ]
+}

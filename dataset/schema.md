@@ -31,6 +31,8 @@
 ```
 
 - `type` 是 CODESYS 类型字符串（含 `ARRAY[...] OF ...`、`STRING(n)` 等）。
+- `inouts[].capacity`（可选）：`ARRAY[*]` 变长数组的具体容量提示，测试驱动据此分配存储
+  （不给时按测试向量中出现的最大长度推断）。
 - `duts[].kind`：`struct` / `enum` / `alias` / `union`；`struct` 用 `fields` 描述成员，
   `enum` 用 `values` 描述取值列表。
 

@@ -44,6 +44,17 @@ def _run_sim(request, timeout=600.0):
                 pass
 
 
+def _scalar_keys(task):
+    itf = task["interface"]
+    struct_names = {d["name"] for d in itf.get("duts", [])}
+    keys = []
+    for grp in ("outputs", "inouts"):
+        for e in itf.get(grp, []):
+            if driver_gen._classify(e["type"], struct_names)["kind"] == "scalar":
+                keys.append(e["name"])
+    return keys
+
+
 def run_task(task, pous, duts=None):
     """Run all test cases of `task` against `pous` (+ optional `duts`).
 
@@ -52,6 +63,7 @@ def run_task(task, pous, duts=None):
     """
     duts = duts or []
     cases = task["test_cases"]
+    scalar_keys = _scalar_keys(task)
 
     groups = {}
     order = []
@@ -71,7 +83,9 @@ def run_task(task, pous, duts=None):
         sub["test_cases"] = groups[sm]
         driver = driver_gen.generate(sub)
         req = {"id": task["id"], "scan_ms": sm, "duts": duts,
-               "pous": pous, "driver": driver}
+               "pous": pous, "driver": driver,
+               "debug_reads": ["CI_TEST_DRIVER.fail_%s" % k
+                               for k in scalar_keys]}
         resp = _run_sim(req)
         if not resp.get("ok"):
             raise RuntimeError("simulation failed for scan_ms=%d: %s"
@@ -79,12 +93,18 @@ def run_task(task, pous, duts=None):
         total_pass += resp["passCnt"]
         total_fail += resp["failCnt"]
         all_pass = all_pass and resp["allPass"]
+        fail_values = {}
+        for k, v in (resp.get("debug") or {}).items():
+            if not str(v).startswith("ERR"):
+                fail_values[k.rsplit("fail_", 1)[-1]] = v
         group_results.append({
             "scan_ms": sm, "nCases": len(groups[sm]),
+            "caseIds": [c["id"] for c in groups[sm]],
             "allPass": resp["allPass"], "passCnt": resp["passCnt"],
             "failCnt": resp["failCnt"],
             "firstFailTc": resp.get("firstFailTc"),
             "firstFailStep": resp.get("firstFailStep"),
+            "failValues": fail_values,
         })
 
     return {"allPass": all_pass, "passCnt": total_pass,

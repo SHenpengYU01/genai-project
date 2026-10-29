@@ -1,0 +1,5 @@
+{
+ "responses": [
+  "<<<POU name=TankLevel kind=function_block>>>\nFUNCTION_BLOCK TankLevel\nVAR_INPUT\n    level : REAL;\n    lowLevel : REAL;\n    highLevel : REAL;\n    highHighLevel : REAL;\nEND_VAR\nVAR_OUTPUT\n    pumpOn : BOOL;\n    highHighAlarm : BOOL;\nEND_VAR\n<<<IMPL>>>\nIF level < lowLevel THEN\n    pumpOn := TRUE;\nELSIF level > highLevel THEN\n    pumpOn := FALSE;\nEND_IF\nhighHighAlarm := (level > highHighLevel);\n<<<END>>>"
+ ]
+}
