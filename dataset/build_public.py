@@ -2932,6 +2932,160 @@ TASKS.append({
 })
 
 
+# ---------------------------------------------------------------------------
+# hard 6: FIFO queue (adapted from VARIANT to INT element)
+# ---------------------------------------------------------------------------
+TASKS.append({
+    "id": "public_hard_006",
+    "source": "public",
+    "difficulty": "hard",
+    "title": "FIFO 先进先出队列",
+    "pou": {"type": "function_block", "name": "FifoQueue"},
+    "requirement": {
+        "en": (
+            "Implement a first-in-first-out circular queue whose capacity is derived "
+            "from the caller-supplied buffer. enqueue rising edge appends item at the "
+            "tail if not full; dequeue rising edge removes the front into item if not "
+            "empty; reset empties the queue. status: 0 ok, 16#8001 dequeue empty, "
+            "16#8002 enqueue full. (Adapted: element type fixed to INT, capacity "
+            "derived from the buffer bounds.)"
+        ),
+        "zh": (
+            "实现先进先出环形队列，容量由调用方提供的缓冲推导。enqueue 上升沿在队尾追加 item(未满时)；"
+            "dequeue 上升沿把队首元素写回 item(非空时)；reset 清空队列。status：0 成功、16#8001 空队列"
+            "出队、16#8002 满队列入队。(改编：原题用 VARIANT 泛型，因编译服务不支持 VARIANT，元素类型"
+            "固定为 INT，容量仍由缓冲下界/上界推导。)"
+        ),
+    },
+    "interface": {
+        "duts": [],
+        "inputs": [
+            {"name": "enqueue", "type": "BOOL", "desc": "入队请求(上升沿一次)"},
+            {"name": "dequeue", "type": "BOOL", "desc": "出队请求(上升沿一次)"},
+            {"name": "reset", "type": "BOOL", "desc": "清空队列(优先)"},
+        ],
+        "outputs": [
+            {"name": "elementCount", "type": "DINT", "desc": "当前有效元素数"},
+            {"name": "status", "type": "WORD", "desc": "0 正常 8001 空出队 8002 满入队"},
+        ],
+        "inouts": [
+            {"name": "item", "type": "INT", "desc": "入队取值/出队写回"},
+            {"name": "buffer", "type": "ARRAY[*] OF INT", "desc": "队列存储"},
+        ],
+    },
+    "meta": {
+        "adaptation": "原题 buffer/item 为 VARIANT 泛型引用；编译服务(CODESYS 脚本工程)中 VARIANT 为未知类型，故改编为 INT 元素 + ARRAY[*] 定长缓冲，容量仍由实参下界/上界推导，队列逻辑不变。"
+    },
+    "ltl_specs": [
+        {"id": "P1", "description": "元素数不越界。",
+         "formula": "G(elementCount >= 0 && elementCount <= 10)"},
+        {"id": "P2", "description": "空队列出队报 8001。",
+         "formula": "G((reset || elementCount = 0) -> (status = 0 || status = 16#8001))"},
+    ],
+    "test_cases": [
+        {"id": "TC1", "description": "入队与出队", "scan_ms": 10, "steps": [
+            {"inputs": {"enqueue": False, "dequeue": False, "reset": True, "item": 0},
+             "expect": {"elementCount": 0, "status": 0}},
+            {"inputs": {"enqueue": True, "dequeue": False, "reset": False, "item": 5},
+             "expect": {"elementCount": 1, "status": 0, "buffer": [5]}},
+            {"inputs": {"enqueue": True, "dequeue": False, "reset": False, "item": 7},
+             "expect": {"elementCount": 2, "status": 0}},
+            {"inputs": {"enqueue": False, "dequeue": True, "reset": False, "item": 0},
+             "expect": {"elementCount": 1, "status": 0, "item": 5}},
+        ]},
+        {"id": "TC2", "description": "空队列出队报错", "scan_ms": 10, "steps": [
+            {"inputs": {"enqueue": False, "dequeue": False, "reset": True, "item": 0},
+             "expect": {"elementCount": 0}},
+            {"inputs": {"enqueue": False, "dequeue": True, "reset": False, "item": 0},
+             "expect": {"elementCount": 0, "status": 32769}},
+        ]},
+    ],
+    "reference": {
+        "auto_wire": False,
+        "duts": [],
+        "pous": [
+            {
+                "name": "FifoQueue",
+                "kind": "function_block",
+                "declaration": (
+                    "FUNCTION_BLOCK FifoQueue\n"
+                    "VAR_INPUT\n"
+                    "    enqueue : BOOL;\n"
+                    "    dequeue : BOOL;\n"
+                    "    reset : BOOL;\n"
+                    "END_VAR\n"
+                    "VAR_OUTPUT\n"
+                    "    elementCount : DINT;\n"
+                    "    status : WORD;\n"
+                    "END_VAR\n"
+                    "VAR_IN_OUT\n"
+                    "    item : INT;\n"
+                    "    buffer : ARRAY[*] OF INT;\n"
+                    "END_VAR\n"
+                    "VAR\n"
+                    "    head : DINT := 0;\n"
+                    "    tail : DINT := 0;\n"
+                    "    count : DINT := 0;\n"
+                    "    capacity : DINT;\n"
+                    "    enqPrev : BOOL;\n"
+                    "    deqPrev : BOOL;\n"
+                    "    enqRising : BOOL;\n"
+                    "    deqRising : BOOL;\n"
+                    "END_VAR\n"),
+                "implementation": (
+                    "capacity := UPPER_BOUND(buffer, 1) - LOWER_BOUND(buffer, 1) + 1;\n"
+                    "status := 0;\n"
+                    "enqRising := enqueue AND NOT enqPrev;\n"
+                    "deqRising := dequeue AND NOT deqPrev;\n"
+                    "enqPrev := enqueue;\n"
+                    "deqPrev := dequeue;\n"
+                    "IF reset THEN\n"
+                    "    head := 0;\n"
+                    "    tail := 0;\n"
+                    "    count := 0;\n"
+                    "ELSIF enqRising THEN\n"
+                    "    IF count >= capacity THEN\n"
+                    "        status := 16#8002;\n"
+                    "    ELSE\n"
+                    "        buffer[LOWER_BOUND(buffer, 1) + tail] := item;\n"
+                    "        tail := tail + 1;\n"
+                    "        IF tail >= capacity THEN\n"
+                    "            tail := 0;\n"
+                    "        END_IF\n"
+                    "        count := count + 1;\n"
+                    "    END_IF\n"
+                    "ELSIF deqRising THEN\n"
+                    "    IF count <= 0 THEN\n"
+                    "        status := 16#8001;\n"
+                    "    ELSE\n"
+                    "        item := buffer[LOWER_BOUND(buffer, 1) + head];\n"
+                    "        head := head + 1;\n"
+                    "        IF head >= capacity THEN\n"
+                    "            head := 0;\n"
+                    "        END_IF\n"
+                    "        count := count - 1;\n"
+                    "    END_IF\n"
+                    "END_IF\n"
+                    "elementCount := count;\n"),
+            },
+            {
+                "name": "PLC_PRG",
+                "kind": "program",
+                "declaration": (
+                    "PROGRAM PLC_PRG\n"
+                    "VAR\n"
+                    "    fb : FifoQueue;\n"
+                    "    buf : ARRAY[1..10] OF INT;\n"
+                    "    it : INT;\n"
+                    "END_VAR\n"),
+                "implementation": (
+                    "fb(enqueue := FALSE, dequeue := FALSE, reset := FALSE, item := it, buffer := buf);\n"),
+            },
+        ],
+    },
+})
+
+
 def dump():
     os.makedirs(OUT, exist_ok=True)
     for t in TASKS:
