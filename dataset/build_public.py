@@ -1249,6 +1249,681 @@ TASKS.append({
 })
 
 
+# ---------------------------------------------------------------------------
+# medium 4: Analog Batch Processing (struct + ARRAY[*] + caller)
+# ---------------------------------------------------------------------------
+TASKS.append({
+    "id": "public_medium_004",
+    "source": "public",
+    "difficulty": "medium",
+    "title": "模拟量批处理转换",
+    "pou": {"type": "function_block", "name": "AnalogBatch"},
+    "requirement": {
+        "en": (
+            "Process analogValues in batches into engineering values. count is how "
+            "many channels to process; match channels by ordinal position from each "
+            "array's lower bound. Per channel, if enabled convert by measuringMode "
+            "(0 linear 0/+-27648 to loLIM..hiLIM; 1 standard temperature =raw/10; "
+            "2 climatic temperature =raw/100). Invalid mode sets retVal 16#8001; "
+            "hiLIM<=loLIM sets retVal 16#8002."
+        ),
+        "zh": (
+            "批量把模拟量原始值 analogValues 转换为工程量。count 为要处理的通道数，按各自数组"
+            "下界对齐通道。每通道若 enable 则按 measuringMode 转换：0 线性(单极性 0..27648、"
+            "双极性 -27648..27648 映射到 loLIM..hiLIM)、1 标准温度(原值/10)、2 气候温度(原值/100)。"
+            "模式非法置 retVal 16#8001；hiLIM<=loLIM 置 retVal 16#8002。"
+        ),
+    },
+    "interface": {
+        "duts": [
+            {"name": "ST_AnalogChannel", "kind": "struct", "fields": [
+                {"name": "enable", "type": "BOOL", "desc": "转换使能"},
+                {"name": "hiLIM", "type": "REAL", "desc": "工程量上限"},
+                {"name": "loLIM", "type": "REAL", "desc": "工程量下限"},
+                {"name": "bipolar", "type": "BOOL", "desc": "FALSE 单极性 TRUE 双极性"},
+                {"name": "measuringMode", "type": "INT", "desc": "0 线性 1 标准温度 2 气候温度"},
+                {"name": "retVal", "type": "WORD", "desc": "状态码"},
+                {"name": "outputValue", "type": "REAL", "desc": "转换结果"},
+            ]},
+        ],
+        "inputs": [
+            {"name": "count", "type": "DINT", "desc": "待转换通道数"},
+        ],
+        "outputs": [],
+        "inouts": [
+            {"name": "analogValues", "type": "ARRAY[*] OF INT", "desc": "原始值数组(只读)"},
+            {"name": "channels", "type": "ARRAY[*] OF ST_AnalogChannel", "desc": "通道记录(写 retVal/outputValue)"},
+        ],
+    },
+    "ltl_specs": [
+        {"id": "P1", "description": "模式非法时报 16#8001。",
+         "formula": "G((channels[0].enable && (channels[0].measuringMode < 0 || channels[0].measuringMode > 2)) -> channels[0].retVal = 16#8001)"},
+        {"id": "P2", "description": "上下限非法时报 16#8002。",
+         "formula": "G((channels[0].enable && channels[0].hiLIM <= channels[0].loLIM) -> channels[0].retVal = 16#8002)"},
+    ],
+    "test_cases": [
+        {"id": "TC1", "description": "线性转换", "scan_ms": 10, "steps": [
+            {"inputs": {"count": 1,
+                        "analogValues": [0],
+                        "channels": [{"enable": True, "hiLIM": 100.0, "loLIM": 0.0,
+                                      "bipolar": False, "measuringMode": 0}]},
+             "expect": {"channels": [{"retVal": 0, "outputValue": 0.0}]}},
+            {"inputs": {"count": 1,
+                        "analogValues": [13824],
+                        "channels": [{"enable": True, "hiLIM": 100.0, "loLIM": 0.0,
+                                      "bipolar": False, "measuringMode": 0}]},
+             "expect": {"channels": [{"retVal": 0, "outputValue": 50.0}]}},
+        ]},
+        {"id": "TC2", "description": "模式非法与上下限非法", "scan_ms": 10, "steps": [
+            {"inputs": {"count": 1, "analogValues": [0],
+                        "channels": [{"enable": True, "hiLIM": 100.0, "loLIM": 0.0,
+                                      "bipolar": False, "measuringMode": 5}]},
+             "expect": {"channels": [{"retVal": 32769}]}},
+            {"inputs": {"count": 1, "analogValues": [0],
+                        "channels": [{"enable": True, "hiLIM": 10.0, "loLIM": 20.0,
+                                      "bipolar": False, "measuringMode": 0}]},
+             "expect": {"channels": [{"retVal": 32770}]}},
+        ]},
+    ],
+    "reference": {
+        "auto_wire": False,
+        "duts": [
+            {"name": "ST_AnalogChannel", "kind": "struct",
+             "declaration": "TYPE ST_AnalogChannel :\nSTRUCT\n    enable : BOOL;\n    hiLIM : REAL;\n    loLIM : REAL;\n    bipolar : BOOL;\n    measuringMode : INT;\n    retVal : WORD;\n    outputValue : REAL;\nEND_STRUCT\nEND_TYPE\n"},
+        ],
+        "pous": [
+            {
+                "name": "AnalogBatch",
+                "kind": "function_block",
+                "declaration": (
+                    "FUNCTION_BLOCK AnalogBatch\n"
+                    "VAR_INPUT\n"
+                    "    count : DINT;\n"
+                    "END_VAR\n"
+                    "VAR_IN_OUT\n"
+                    "    analogValues : ARRAY[*] OF INT;\n"
+                    "    channels : ARRAY[*] OF ST_AnalogChannel;\n"
+                    "END_VAR\n"
+                    "VAR\n"
+                    "    i : DINT;\n"
+                    "    cidx : DINT;\n"
+                    "    aidx : DINT;\n"
+                    "    raw : INT;\n"
+                    "    rawMin : INT;\n"
+                    "    rawMax : INT;\n"
+                    "    mode : INT;\n"
+                    "END_VAR\n"),
+                "implementation": (
+                    "FOR i := 0 TO count - 1 DO\n"
+                    "    cidx := LOWER_BOUND(channels, 1) + i;\n"
+                    "    aidx := LOWER_BOUND(analogValues, 1) + i;\n"
+                    "    IF channels[cidx].enable THEN\n"
+                    "        mode := channels[cidx].measuringMode;\n"
+                    "        IF mode < 0 OR mode > 2 THEN\n"
+                    "            channels[cidx].retVal := 16#8001;\n"
+                    "        ELSIF channels[cidx].hiLIM <= channels[cidx].loLIM THEN\n"
+                    "            channels[cidx].retVal := 16#8002;\n"
+                    "        ELSE\n"
+                    "            raw := analogValues[aidx];\n"
+                    "            IF mode = 0 THEN\n"
+                    "                IF channels[cidx].bipolar THEN\n"
+                    "                    rawMin := -27648;\n"
+                    "                    rawMax := 27648;\n"
+                    "                ELSE\n"
+                    "                    rawMin := 0;\n"
+                    "                    rawMax := 27648;\n"
+                    "                END_IF\n"
+                    "                channels[cidx].outputValue := channels[cidx].loLIM\n"
+                    "                    + (INT_TO_REAL(raw - rawMin) / INT_TO_REAL(rawMax - rawMin))\n"
+                    "                    * (channels[cidx].hiLIM - channels[cidx].loLIM);\n"
+                    "            ELSIF mode = 1 THEN\n"
+                    "                channels[cidx].outputValue := INT_TO_REAL(raw) / 10.0;\n"
+                    "            ELSE\n"
+                    "                channels[cidx].outputValue := INT_TO_REAL(raw) / 100.0;\n"
+                    "            END_IF\n"
+                    "            channels[cidx].retVal := 0;\n"
+                    "        END_IF\n"
+                    "    END_IF\n"
+                    "END_FOR\n"),
+            },
+            {
+                "name": "PLC_PRG",
+                "kind": "program",
+                "declaration": (
+                    "PROGRAM PLC_PRG\n"
+                    "VAR\n"
+                    "    fb : AnalogBatch;\n"
+                    "    avals : ARRAY[0..9] OF INT;\n"
+                    "    chans : ARRAY[0..9] OF ST_AnalogChannel;\n"
+                    "END_VAR\n"),
+                "implementation": "fb(count := 1, analogValues := avals, channels := chans);\n",
+            },
+        ],
+    },
+})
+
+# ---------------------------------------------------------------------------
+# medium 5: Automated Production Line Control
+# ---------------------------------------------------------------------------
+TASKS.append({
+    "id": "public_medium_005",
+    "source": "public",
+    "difficulty": "medium",
+    "title": "自动化生产线控制",
+    "pou": {"type": "function_block", "name": "ProductionLine"},
+    "requirement": {
+        "en": (
+            "A line moves a product through stations A, B, C. Mode switches manual/"
+            "automatic. Manual: ForwardButton drives forward, ReverseButton reverse, "
+            "interlocked. Automatic: SensorA+ButtonA moves forward to B; SensorB stops, "
+            "ButtonB moves to C; SensorC stops, ButtonC turns on CompletionLight; when "
+            "SensorC clears the light turns off."
+        ),
+        "zh": (
+            "生产线把产品依次送过工位 A、B、C。Mode 切换手动/自动。手动：ForwardButton 正转、"
+            "ReverseButton 反转，且互锁不可同时。自动：SensorA 检测到产品且 ButtonA 确认后正转"
+            "送向 B；SensorB 检测到后停止，ButtonB 确认后正转送向 C；SensorC 检测到后停止，"
+            "ButtonC 确认后点亮 CompletionLight；产品被取走(SensorC 消失)后熄灭。"
+        ),
+    },
+    "interface": {
+        "duts": [],
+        "inputs": [
+            {"name": "Mode", "type": "BOOL", "desc": "0 手动 1 自动"},
+            {"name": "ForwardButton", "type": "BOOL", "desc": "正转按钮"},
+            {"name": "ReverseButton", "type": "BOOL", "desc": "反转按钮"},
+            {"name": "SensorA", "type": "BOOL", "desc": "A 工位传感器"},
+            {"name": "SensorB", "type": "BOOL", "desc": "B 工位传感器"},
+            {"name": "SensorC", "type": "BOOL", "desc": "C 工位传感器"},
+            {"name": "ButtonA", "type": "BOOL", "desc": "A 工位完成按钮"},
+            {"name": "ButtonB", "type": "BOOL", "desc": "B 工位完成按钮"},
+            {"name": "ButtonC", "type": "BOOL", "desc": "C 工位完成按钮"},
+        ],
+        "outputs": [
+            {"name": "MotorForward", "type": "BOOL", "desc": "正转输出"},
+            {"name": "MotorReverse", "type": "BOOL", "desc": "反转输出"},
+            {"name": "CompletionLight", "type": "BOOL", "desc": "完成指示灯"},
+        ],
+        "inouts": [],
+    },
+    "ltl_specs": [
+        {"id": "P1", "description": "正反转互锁。",
+         "formula": "G(!(MotorForward && MotorReverse))"},
+        {"id": "P2", "description": "手动正转。",
+         "formula": "G((!Mode && ForwardButton && !ReverseButton) -> MotorForward)"},
+        {"id": "P3", "description": "完成灯只在产品位于 C 工位时点亮。",
+         "formula": "G(CompletionLight -> SensorC)"},
+    ],
+    "test_cases": [
+        {"id": "TC1", "description": "手动正反转与互锁", "scan_ms": 10, "steps": [
+            {"inputs": {"Mode": False, "ForwardButton": True, "ReverseButton": False,
+                        "SensorA": False, "SensorB": False, "SensorC": False,
+                        "ButtonA": False, "ButtonB": False, "ButtonC": False},
+             "expect": {"MotorForward": True, "MotorReverse": False}},
+            {"inputs": {"Mode": False, "ForwardButton": False, "ReverseButton": True,
+                        "SensorA": False, "SensorB": False, "SensorC": False,
+                        "ButtonA": False, "ButtonB": False, "ButtonC": False},
+             "expect": {"MotorForward": False, "MotorReverse": True}},
+            {"inputs": {"Mode": False, "ForwardButton": True, "ReverseButton": True,
+                        "SensorA": False, "SensorB": False, "SensorC": False,
+                        "ButtonA": False, "ButtonB": False, "ButtonC": False},
+             "expect": {"MotorForward": False, "MotorReverse": False}},
+        ]},
+        {"id": "TC2", "description": "自动流程 A→B→C", "scan_ms": 10, "steps": [
+            {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
+                        "SensorA": True, "SensorB": False, "SensorC": False,
+                        "ButtonA": True, "ButtonB": False, "ButtonC": False},
+             "expect": {}},
+            {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
+                        "SensorA": False, "SensorB": False, "SensorC": False,
+                        "ButtonA": False, "ButtonB": False, "ButtonC": False},
+             "expect": {"MotorForward": True}},
+            {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
+                        "SensorA": False, "SensorB": True, "SensorC": False,
+                        "ButtonA": False, "ButtonB": False, "ButtonC": False},
+             "expect": {"MotorForward": False}},
+            {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
+                        "SensorA": False, "SensorB": True, "SensorC": False,
+                        "ButtonA": False, "ButtonB": True, "ButtonC": False},
+             "expect": {}},
+            {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
+                        "SensorA": False, "SensorB": False, "SensorC": False,
+                        "ButtonA": False, "ButtonB": False, "ButtonC": False},
+             "expect": {"MotorForward": True}},
+            {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
+                        "SensorA": False, "SensorB": False, "SensorC": True,
+                        "ButtonA": False, "ButtonB": False, "ButtonC": False},
+             "expect": {"MotorForward": False}},
+            {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
+                        "SensorA": False, "SensorB": False, "SensorC": True,
+                        "ButtonA": False, "ButtonB": False, "ButtonC": True},
+             "expect": {}},
+            {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
+                        "SensorA": False, "SensorB": False, "SensorC": True,
+                        "ButtonA": False, "ButtonB": False, "ButtonC": False},
+             "expect": {"CompletionLight": True}},
+        ]},
+    ],
+    "reference": {
+        "duts": [],
+        "pous": [{
+            "name": "ProductionLine",
+            "kind": "function_block",
+            "declaration": (
+                "FUNCTION_BLOCK ProductionLine\n"
+                "VAR_INPUT\n"
+                "    Mode : BOOL;\n"
+                "    ForwardButton : BOOL;\n"
+                "    ReverseButton : BOOL;\n"
+                "    SensorA : BOOL;\n"
+                "    SensorB : BOOL;\n"
+                "    SensorC : BOOL;\n"
+                "    ButtonA : BOOL;\n"
+                "    ButtonB : BOOL;\n"
+                "    ButtonC : BOOL;\n"
+                "END_VAR\n"
+                "VAR_OUTPUT\n"
+                "    MotorForward : BOOL;\n"
+                "    MotorReverse : BOOL;\n"
+                "    CompletionLight : BOOL;\n"
+                "END_VAR\n"
+                "VAR\n"
+                "    stage : INT := 0;\n"
+                "END_VAR\n"),
+            "implementation": (
+                "MotorForward := FALSE;\n"
+                "MotorReverse := FALSE;\n"
+                "CompletionLight := FALSE;\n"
+                "IF NOT Mode THEN\n"
+                "    IF ReverseButton AND NOT ForwardButton THEN\n"
+                "        MotorReverse := TRUE;\n"
+                "    ELSIF ForwardButton AND NOT ReverseButton THEN\n"
+                "        MotorForward := TRUE;\n"
+                "    END_IF\n"
+                "    stage := 0;\n"
+                "ELSE\n"
+                "    CASE stage OF\n"
+                "    0:\n"
+                "        IF SensorA AND ButtonA THEN\n"
+                "            stage := 1;\n"
+                "        END_IF\n"
+                "    1:\n"
+                "        MotorForward := TRUE;\n"
+                "        IF SensorB THEN\n"
+                "            stage := 2;\n"
+                "        END_IF\n"
+                "    2:\n"
+                "        IF ButtonB THEN\n"
+                "            stage := 3;\n"
+                "        END_IF\n"
+                "    3:\n"
+                "        MotorForward := TRUE;\n"
+                "        IF SensorC THEN\n"
+                "            stage := 4;\n"
+                "        END_IF\n"
+                "    4:\n"
+                "        IF ButtonC THEN\n"
+                "            stage := 5;\n"
+                "        END_IF\n"
+                "    5:\n"
+                "        CompletionLight := TRUE;\n"
+                "        IF NOT SensorC THEN\n"
+                "            stage := 0;\n"
+                "        END_IF\n"
+                "    END_CASE\n"
+                "END_IF\n"),
+        }],
+    },
+})
+
+# ---------------------------------------------------------------------------
+# medium 6: Slab Thickness Alarm and Fault History
+# ---------------------------------------------------------------------------
+TASKS.append({
+    "id": "public_medium_006",
+    "source": "public",
+    "difficulty": "medium",
+    "title": "板厚报警与故障历史",
+    "pou": {"type": "function_block", "name": "SlabThickness"},
+    "requirement": {
+        "en": (
+            "Monitor slab-thickness faults: when signal valid, alarm immediately on "
+            "fault and hold each alarm at least 500ms; on each valid fault rising edge "
+            "increment counter and store FaultTimestamp into history[0] shifting older "
+            "entries; accumulate runtime by CycleTime only while cutting and no fault; "
+            "on power-up or invalid signal clear alarm and hold state."
+        ),
+        "zh": (
+            "监控板厚故障：信号有效时，故障为 TRUE 立即报警且每次报警至少保持 500ms；每次有效"
+            "故障上升沿使计数器加 1 并把 FaultTimestamp 存入 history[0]、旧记录右移；仅在切割运行"
+            "且无故障时按 CycleTime 累加运行时间；上电或信号无效时关断报警并清除保持状态。"
+        ),
+    },
+    "interface": {
+        "duts": [],
+        "inputs": [
+            {"name": "THICKNESS_FAULT", "type": "BOOL", "desc": "厚度超差"},
+            {"name": "THICKNESS_SIGNAL_VALID", "type": "BOOL", "desc": "信号有效"},
+            {"name": "CUTTING_RUN", "type": "BOOL", "desc": "切割运行状态"},
+            {"name": "FaultTimestamp", "type": "DINT", "desc": "故障时间戳(秒)"},
+            {"name": "CycleTime", "type": "TIME", "desc": "调用间隔"},
+        ],
+        "outputs": [
+            {"name": "THICKNESS_ALARM", "type": "BOOL", "desc": "报警(至少 500ms 保持)"},
+            {"name": "Slab_Fault_Counter", "type": "UINT", "desc": "有效故障次数"},
+            {"name": "Slab_Runtime_Accumulator", "type": "LTIME", "desc": "正常切割累计时间"},
+            {"name": "Slab_Fault_History", "type": "ARRAY[0..4] OF DINT", "desc": "最近 5 条故障时间戳"},
+        ],
+        "inouts": [],
+    },
+    "ltl_specs": [
+        {"id": "P1", "description": "信号无效时不报警。",
+         "formula": "G(!THICKNESS_SIGNAL_VALID -> !THICKNESS_ALARM)"},
+        {"id": "P2", "description": "报警意味着信号有效。",
+         "formula": "G(THICKNESS_ALARM -> THICKNESS_SIGNAL_VALID)"},
+        {"id": "P3", "description": "故障计数单调不减。",
+         "formula": "G(Slab_Fault_Counter <= X(Slab_Fault_Counter))"},
+    ],
+    "test_cases": [
+        {"id": "TC1", "description": "故障记录与计数", "scan_ms": 10, "steps": [
+            {"inputs": {"THICKNESS_FAULT": False, "THICKNESS_SIGNAL_VALID": True,
+                        "CUTTING_RUN": False, "FaultTimestamp": 0, "CycleTime": "T#10ms"},
+             "expect": {"THICKNESS_ALARM": False, "Slab_Fault_Counter": 0}},
+            {"inputs": {"THICKNESS_FAULT": True, "THICKNESS_SIGNAL_VALID": True,
+                        "CUTTING_RUN": False, "FaultTimestamp": 100, "CycleTime": "T#10ms"},
+             "expect": {"THICKNESS_ALARM": True, "Slab_Fault_Counter": 1,
+                        "Slab_Fault_History": [100, 0, 0, 0, 0]}},
+        ]},
+        {"id": "TC2", "description": "信号无效时无记录", "scan_ms": 10, "steps": [
+            {"inputs": {"THICKNESS_FAULT": True, "THICKNESS_SIGNAL_VALID": False,
+                        "CUTTING_RUN": False, "FaultTimestamp": 100, "CycleTime": "T#10ms"},
+             "expect": {"THICKNESS_ALARM": False, "Slab_Fault_Counter": 0}},
+        ]},
+    ],
+    "reference": {
+        "duts": [],
+        "pous": [{
+            "name": "SlabThickness",
+            "kind": "function_block",
+            "declaration": (
+                "FUNCTION_BLOCK SlabThickness\n"
+                "VAR_INPUT\n"
+                "    THICKNESS_FAULT : BOOL;\n"
+                "    THICKNESS_SIGNAL_VALID : BOOL;\n"
+                "    CUTTING_RUN : BOOL;\n"
+                "    FaultTimestamp : DINT;\n"
+                "    CycleTime : TIME;\n"
+                "END_VAR\n"
+                "VAR_OUTPUT\n"
+                "    THICKNESS_ALARM : BOOL;\n"
+                "    Slab_Fault_Counter : UINT;\n"
+                "    Slab_Runtime_Accumulator : LTIME;\n"
+                "    Slab_Fault_History : ARRAY[0..4] OF DINT;\n"
+                "END_VAR\n"
+                "VAR\n"
+                "    holdTof : TOF;\n"
+                "    faultPrev : BOOL;\n"
+                "    faultRising : BOOL;\n"
+                "    i : INT;\n"
+                "END_VAR\n"),
+            "implementation": (
+                "IF NOT THICKNESS_SIGNAL_VALID THEN\n"
+                "    THICKNESS_ALARM := FALSE;\n"
+                "    holdTof(IN := FALSE, PT := T#500ms);\n"
+                "    faultPrev := THICKNESS_FAULT;\n"
+                "ELSE\n"
+                "    faultRising := THICKNESS_FAULT AND NOT faultPrev;\n"
+                "    faultPrev := THICKNESS_FAULT;\n"
+                "    IF faultRising THEN\n"
+                "        Slab_Fault_Counter := Slab_Fault_Counter + 1;\n"
+                "        FOR i := 4 TO 1 BY -1 DO\n"
+                "            Slab_Fault_History[i] := Slab_Fault_History[i - 1];\n"
+                "        END_FOR\n"
+                "        Slab_Fault_History[0] := FaultTimestamp;\n"
+                "    END_IF\n"
+                "    holdTof(IN := THICKNESS_FAULT, PT := T#500ms);\n"
+                "    THICKNESS_ALARM := THICKNESS_FAULT OR holdTof.Q;\n"
+                "    IF CUTTING_RUN AND NOT THICKNESS_FAULT THEN\n"
+                "        Slab_Runtime_Accumulator := Slab_Runtime_Accumulator + TO_LTIME(CycleTime);\n"
+                "    END_IF\n"
+                "END_IF\n"),
+        }],
+    },
+})
+
+# ---------------------------------------------------------------------------
+# medium 7: Office HVAC Multi-mode Energy-Saving Control
+# ---------------------------------------------------------------------------
+TASKS.append({
+    "id": "public_medium_007",
+    "source": "public",
+    "difficulty": "medium",
+    "title": "办公楼 HVAC 多模式节能控制",
+    "pou": {"type": "function_block", "name": "HVAC"},
+    "requirement": {
+        "en": (
+            "Control a supply fan and temperature setpoint adjustment. Valid selector "
+            "0 Auto, 1 Comfort, 2 Economy, 3 Night. Fan runs only after occupancy and "
+            "non-Night mode hold for 30s. Auto: 0C occupied, +3C energy-saving or +2C "
+            "standard unoccupied. Comfort: 0/+1. Economy: 0/+4. Night: +4 always. "
+            "Clamp adjustment within +-4C."
+        ),
+        "zh": (
+            "控制送风机与温度设定点偏移。selector 有效值 0 自动、1 舒适、2 经济、3 夜间。仅当有人"
+            "且非夜间模式持续 30s 后风机才运行。自动：有人 0℃，无人节能 +3℃、标准 +2℃；舒适："
+            "有人 0℃、无人 +1℃；经济：有人 0℃、无人 +4℃；夜间恒 +4℃。偏移限制在 ±4℃ 内。"
+        ),
+    },
+    "interface": {
+        "duts": [],
+        "inputs": [
+            {"name": "OCCUPANCY_DETECTED", "type": "BOOL", "desc": "有人检测"},
+            {"name": "ENERGY_SAVING_MODE", "type": "BOOL", "desc": "节能选择"},
+            {"name": "HVAC_MODE_SELECTOR", "type": "INT", "desc": "0 自动 1 舒适 2 经济 3 夜间"},
+        ],
+        "outputs": [
+            {"name": "SUPPLY_FAN_RUN", "type": "BOOL", "desc": "送风机运行"},
+            {"name": "TEMP_SETPOINT_ADJUST", "type": "INT", "desc": "温度设定点偏移(℃)"},
+        ],
+        "inouts": [],
+    },
+    "ltl_specs": [
+        {"id": "P1", "description": "夜间模式风机不运行。",
+         "formula": "G(HVAC_MODE_SELECTOR = 3 -> !SUPPLY_FAN_RUN)"},
+        {"id": "P2", "description": "设定点偏移在 ±4℃ 内。",
+         "formula": "G(TEMP_SETPOINT_ADJUST >= -4 && TEMP_SETPOINT_ADJUST <= 4)"},
+        {"id": "P3", "description": "自动无人节能时偏移 +3℃。",
+         "formula": "G((HVAC_MODE_SELECTOR = 0 && !OCCUPANCY_DETECTED && ENERGY_SAVING_MODE) -> TEMP_SETPOINT_ADJUST = 3)"},
+    ],
+    "test_cases": [
+        {"id": "TC1", "description": "模式与偏移", "scan_ms": 1000, "steps": [
+            {"inputs": {"OCCUPANCY_DETECTED": False, "ENERGY_SAVING_MODE": True, "HVAC_MODE_SELECTOR": 0},
+             "expect": {"TEMP_SETPOINT_ADJUST": 3, "SUPPLY_FAN_RUN": False}},
+            {"inputs": {"OCCUPANCY_DETECTED": True, "ENERGY_SAVING_MODE": True, "HVAC_MODE_SELECTOR": 0},
+             "expect": {"TEMP_SETPOINT_ADJUST": 0, "SUPPLY_FAN_RUN": False}},
+            {"inputs": {"OCCUPANCY_DETECTED": False, "ENERGY_SAVING_MODE": False, "HVAC_MODE_SELECTOR": 3},
+             "expect": {"TEMP_SETPOINT_ADJUST": 4, "SUPPLY_FAN_RUN": False}},
+        ]},
+        {"id": "TC2", "description": "风机 30s 延时", "scan_ms": 1000, "steps": [
+            {"inputs": {"OCCUPANCY_DETECTED": True, "ENERGY_SAVING_MODE": False, "HVAC_MODE_SELECTOR": 1},
+             "expect": {"SUPPLY_FAN_RUN": False}},
+            {"inputs": {"OCCUPANCY_DETECTED": True, "ENERGY_SAVING_MODE": False, "HVAC_MODE_SELECTOR": 1},
+             "repeat": 29, "expect": {"SUPPLY_FAN_RUN": False}},
+            {"inputs": {"OCCUPANCY_DETECTED": True, "ENERGY_SAVING_MODE": False, "HVAC_MODE_SELECTOR": 1},
+             "repeat": 1, "expect": {"SUPPLY_FAN_RUN": True}},
+        ]},
+    ],
+    "reference": {
+        "duts": [],
+        "pous": [{
+            "name": "HVAC",
+            "kind": "function_block",
+            "declaration": (
+                "FUNCTION_BLOCK HVAC\n"
+                "VAR_INPUT\n"
+                "    OCCUPANCY_DETECTED : BOOL;\n"
+                "    ENERGY_SAVING_MODE : BOOL;\n"
+                "    HVAC_MODE_SELECTOR : INT;\n"
+                "END_VAR\n"
+                "VAR_OUTPUT\n"
+                "    SUPPLY_FAN_RUN : BOOL;\n"
+                "    TEMP_SETPOINT_ADJUST : INT;\n"
+                "END_VAR\n"
+                "VAR\n"
+                "    fanTon : TON;\n"
+                "    adjust : INT;\n"
+                "END_VAR\n"),
+            "implementation": (
+                "fanTon(IN := OCCUPANCY_DETECTED AND (HVAC_MODE_SELECTOR <> 3), PT := T#30s);\n"
+                "SUPPLY_FAN_RUN := fanTon.Q;\n"
+                "adjust := 0;\n"
+                "CASE HVAC_MODE_SELECTOR OF\n"
+                "0:\n"
+                "    IF OCCUPANCY_DETECTED THEN\n"
+                "        adjust := 0;\n"
+                "    ELSIF ENERGY_SAVING_MODE THEN\n"
+                "        adjust := 3;\n"
+                "    ELSE\n"
+                "        adjust := 2;\n"
+                "    END_IF\n"
+                "1:\n"
+                "    IF OCCUPANCY_DETECTED THEN\n"
+                "        adjust := 0;\n"
+                "    ELSE\n"
+                "        adjust := 1;\n"
+                "    END_IF\n"
+                "2:\n"
+                "    IF OCCUPANCY_DETECTED THEN\n"
+                "        adjust := 0;\n"
+                "    ELSE\n"
+                "        adjust := 4;\n"
+                "    END_IF\n"
+                "3:\n"
+                "    adjust := 4;\n"
+                "END_CASE\n"
+                "IF adjust > 4 THEN\n"
+                "    adjust := 4;\n"
+                "END_IF\n"
+                "IF adjust < -4 THEN\n"
+                "    adjust := -4;\n"
+                "END_IF\n"
+                "TEMP_SETPOINT_ADJUST := adjust;\n"),
+        }],
+    },
+})
+
+# ---------------------------------------------------------------------------
+# medium 8: IPv4 Parsing with Format and Range Checks
+# ---------------------------------------------------------------------------
+TASKS.append({
+    "id": "public_medium_008",
+    "source": "public",
+    "difficulty": "medium",
+    "title": "IPv4 地址解析",
+    "pou": {"type": "function_block", "name": "IPv4Parse"},
+    "requirement": {
+        "en": (
+            "Parse a dotted-decimal IPv4 string into a 32-bit unsigned integer. Four "
+            "nonempty decimal segments separated by periods, each 0..255. Network byte "
+            "order: first segment is the most significant byte. Zero on malformed input."
+        ),
+        "zh": (
+            "把点分十进制 IPv4 字符串解析为 32 位无符号整数。要求四段非空十进制数、以句点分隔、"
+            "每段 0..255，按网络字节序拼接(第一段为最高有效字节)。非法输入时 ipValue 置 0。"
+        ),
+    },
+    "interface": {
+        "duts": [],
+        "inputs": [
+            {"name": "ipText", "type": "STRING(254)", "desc": "待解析的 IPv4 文本"},
+        ],
+        "outputs": [
+            {"name": "ipValue", "type": "UDINT", "desc": "32 位地址(网络字节序)，非法为 0"},
+        ],
+        "inouts": [],
+    },
+    "ltl_specs": [
+        {"id": "P1", "description": "解析结果合法范围内。",
+         "formula": "G(ipValue <= 16#FFFFFFFF)"},
+    ],
+    "test_cases": [
+        {"id": "TC1", "description": "合法地址解析", "scan_ms": 10, "steps": [
+            {"inputs": {"ipText": "192.168.1.1"},
+             "expect": {"ipValue": 3232235777}},
+            {"inputs": {"ipText": "0.0.0.0"},
+             "expect": {"ipValue": 0}},
+        ]},
+        {"id": "TC2", "description": "非法地址置零", "scan_ms": 10, "steps": [
+            {"inputs": {"ipText": "256.1.1.1"}, "expect": {"ipValue": 0}},
+            {"inputs": {"ipText": "1.2.3"}, "expect": {"ipValue": 0}},
+            {"inputs": {"ipText": "1.2.3.4.5"}, "expect": {"ipValue": 0}},
+        ]},
+    ],
+    "reference": {
+        "duts": [],
+        "pous": [{
+            "name": "IPv4Parse",
+            "kind": "function_block",
+            "declaration": (
+                "FUNCTION_BLOCK IPv4Parse\n"
+                "VAR_INPUT\n"
+                "    ipText : STRING(254);\n"
+                "END_VAR\n"
+                "VAR_OUTPUT\n"
+                "    ipValue : UDINT;\n"
+                "END_VAR\n"
+                "VAR\n"
+                "    i : INT;\n"
+                "    n : INT;\n"
+                "    segCount : INT;\n"
+                "    segVal : INT;\n"
+                "    result : UDINT;\n"
+                "    valid : BOOL;\n"
+                "    started : BOOL;\n"
+                "    ch : BYTE;\n"
+                "END_VAR\n"),
+            "implementation": (
+                "n := LEN(ipText);\n"
+                "segCount := 0;\n"
+                "segVal := 0;\n"
+                "result := 0;\n"
+                "valid := TRUE;\n"
+                "started := FALSE;\n"
+                "FOR i := 1 TO n DO\n"
+                "    ch := ipText[i];\n"
+                "    IF ch = 46 THEN\n"
+                "        IF NOT started OR segVal > 255 THEN\n"
+                "            valid := FALSE;\n"
+                "        END_IF\n"
+                "        result := SHL(result, 8) OR INT_TO_UDINT(segVal);\n"
+                "        segCount := segCount + 1;\n"
+                "        segVal := 0;\n"
+                "        started := FALSE;\n"
+                "    ELSIF ch >= 48 AND ch <= 57 THEN\n"
+                "        started := TRUE;\n"
+                "        segVal := segVal * 10 + (BYTE_TO_INT(ch) - 48);\n"
+                "        IF segVal > 255 THEN\n"
+                "            valid := FALSE;\n"
+                "        END_IF\n"
+                "    ELSE\n"
+                "        valid := FALSE;\n"
+                "    END_IF\n"
+                "END_FOR\n"
+                "IF NOT started OR segVal > 255 THEN\n"
+                "    valid := FALSE;\n"
+                "END_IF\n"
+                "result := SHL(result, 8) OR INT_TO_UDINT(segVal);\n"
+                "segCount := segCount + 1;\n"
+                "IF valid AND segCount = 4 THEN\n"
+                "    ipValue := result;\n"
+                "ELSE\n"
+                "    ipValue := 0;\n"
+                "END_IF\n"),
+        }],
+    },
+})
+
+
 def dump():
     os.makedirs(OUT, exist_ok=True)
     for t in TASKS:

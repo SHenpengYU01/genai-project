@@ -1,0 +1,229 @@
+{
+  "id": "public_medium_004",
+  "source": "public",
+  "difficulty": "medium",
+  "title": "模拟量批处理转换",
+  "pou": {
+    "type": "function_block",
+    "name": "AnalogBatch"
+  },
+  "requirement": {
+    "en": "Process analogValues in batches into engineering values. count is how many channels to process; match channels by ordinal position from each array's lower bound. Per channel, if enabled convert by measuringMode (0 linear 0/+-27648 to loLIM..hiLIM; 1 standard temperature =raw/10; 2 climatic temperature =raw/100). Invalid mode sets retVal 16#8001; hiLIM<=loLIM sets retVal 16#8002.",
+    "zh": "批量把模拟量原始值 analogValues 转换为工程量。count 为要处理的通道数，按各自数组下界对齐通道。每通道若 enable 则按 measuringMode 转换：0 线性(单极性 0..27648、双极性 -27648..27648 映射到 loLIM..hiLIM)、1 标准温度(原值/10)、2 气候温度(原值/100)。模式非法置 retVal 16#8001；hiLIM<=loLIM 置 retVal 16#8002。"
+  },
+  "interface": {
+    "duts": [
+      {
+        "name": "ST_AnalogChannel",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "enable",
+            "type": "BOOL",
+            "desc": "转换使能"
+          },
+          {
+            "name": "hiLIM",
+            "type": "REAL",
+            "desc": "工程量上限"
+          },
+          {
+            "name": "loLIM",
+            "type": "REAL",
+            "desc": "工程量下限"
+          },
+          {
+            "name": "bipolar",
+            "type": "BOOL",
+            "desc": "FALSE 单极性 TRUE 双极性"
+          },
+          {
+            "name": "measuringMode",
+            "type": "INT",
+            "desc": "0 线性 1 标准温度 2 气候温度"
+          },
+          {
+            "name": "retVal",
+            "type": "WORD",
+            "desc": "状态码"
+          },
+          {
+            "name": "outputValue",
+            "type": "REAL",
+            "desc": "转换结果"
+          }
+        ]
+      }
+    ],
+    "inputs": [
+      {
+        "name": "count",
+        "type": "DINT",
+        "desc": "待转换通道数"
+      }
+    ],
+    "outputs": [],
+    "inouts": [
+      {
+        "name": "analogValues",
+        "type": "ARRAY[*] OF INT",
+        "desc": "原始值数组(只读)"
+      },
+      {
+        "name": "channels",
+        "type": "ARRAY[*] OF ST_AnalogChannel",
+        "desc": "通道记录(写 retVal/outputValue)"
+      }
+    ]
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "模式非法时报 16#8001。",
+      "formula": "G((channels[0].enable && (channels[0].measuringMode < 0 || channels[0].measuringMode > 2)) -> channels[0].retVal = 16#8001)"
+    },
+    {
+      "id": "P2",
+      "description": "上下限非法时报 16#8002。",
+      "formula": "G((channels[0].enable && channels[0].hiLIM <= channels[0].loLIM) -> channels[0].retVal = 16#8002)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "线性转换",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "count": 1,
+            "analogValues": [
+              0
+            ],
+            "channels": [
+              {
+                "enable": true,
+                "hiLIM": 100.0,
+                "loLIM": 0.0,
+                "bipolar": false,
+                "measuringMode": 0
+              }
+            ]
+          },
+          "expect": {
+            "channels": [
+              {
+                "retVal": 0,
+                "outputValue": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "inputs": {
+            "count": 1,
+            "analogValues": [
+              13824
+            ],
+            "channels": [
+              {
+                "enable": true,
+                "hiLIM": 100.0,
+                "loLIM": 0.0,
+                "bipolar": false,
+                "measuringMode": 0
+              }
+            ]
+          },
+          "expect": {
+            "channels": [
+              {
+                "retVal": 0,
+                "outputValue": 50.0
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "模式非法与上下限非法",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "count": 1,
+            "analogValues": [
+              0
+            ],
+            "channels": [
+              {
+                "enable": true,
+                "hiLIM": 100.0,
+                "loLIM": 0.0,
+                "bipolar": false,
+                "measuringMode": 5
+              }
+            ]
+          },
+          "expect": {
+            "channels": [
+              {
+                "retVal": 32769
+              }
+            ]
+          }
+        },
+        {
+          "inputs": {
+            "count": 1,
+            "analogValues": [
+              0
+            ],
+            "channels": [
+              {
+                "enable": true,
+                "hiLIM": 10.0,
+                "loLIM": 20.0,
+                "bipolar": false,
+                "measuringMode": 0
+              }
+            ]
+          },
+          "expect": {
+            "channels": [
+              {
+                "retVal": 32770
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "auto_wire": false,
+    "duts": [
+      {
+        "name": "ST_AnalogChannel",
+        "kind": "struct",
+        "declaration": "TYPE ST_AnalogChannel :\nSTRUCT\n    enable : BOOL;\n    hiLIM : REAL;\n    loLIM : REAL;\n    bipolar : BOOL;\n    measuringMode : INT;\n    retVal : WORD;\n    outputValue : REAL;\nEND_STRUCT\nEND_TYPE\n"
+      }
+    ],
+    "pous": [
+      {
+        "name": "AnalogBatch",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK AnalogBatch\nVAR_INPUT\n    count : DINT;\nEND_VAR\nVAR_IN_OUT\n    analogValues : ARRAY[*] OF INT;\n    channels : ARRAY[*] OF ST_AnalogChannel;\nEND_VAR\nVAR\n    i : DINT;\n    cidx : DINT;\n    aidx : DINT;\n    raw : INT;\n    rawMin : INT;\n    rawMax : INT;\n    mode : INT;\nEND_VAR\n",
+        "implementation": "FOR i := 0 TO count - 1 DO\n    cidx := LOWER_BOUND(channels, 1) + i;\n    aidx := LOWER_BOUND(analogValues, 1) + i;\n    IF channels[cidx].enable THEN\n        mode := channels[cidx].measuringMode;\n        IF mode < 0 OR mode > 2 THEN\n            channels[cidx].retVal := 16#8001;\n        ELSIF channels[cidx].hiLIM <= channels[cidx].loLIM THEN\n            channels[cidx].retVal := 16#8002;\n        ELSE\n            raw := analogValues[aidx];\n            IF mode = 0 THEN\n                IF channels[cidx].bipolar THEN\n                    rawMin := -27648;\n                    rawMax := 27648;\n                ELSE\n                    rawMin := 0;\n                    rawMax := 27648;\n                END_IF\n                channels[cidx].outputValue := channels[cidx].loLIM\n                    + (INT_TO_REAL(raw - rawMin) / INT_TO_REAL(rawMax - rawMin))\n                    * (channels[cidx].hiLIM - channels[cidx].loLIM);\n            ELSIF mode = 1 THEN\n                channels[cidx].outputValue := INT_TO_REAL(raw) / 10.0;\n            ELSE\n                channels[cidx].outputValue := INT_TO_REAL(raw) / 100.0;\n            END_IF\n            channels[cidx].retVal := 0;\n        END_IF\n    END_IF\nEND_FOR\n"
+      },
+      {
+        "name": "PLC_PRG",
+        "kind": "program",
+        "declaration": "PROGRAM PLC_PRG\nVAR\n    fb : AnalogBatch;\n    avals : ARRAY[0..9] OF INT;\n    chans : ARRAY[0..9] OF ST_AnalogChannel;\nEND_VAR\n",
+        "implementation": "fb(count := 1, analogValues := avals, channels := chans);\n"
+      }
+    ]
+  }
+}

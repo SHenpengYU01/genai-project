@@ -1,0 +1,156 @@
+{
+  "id": "public_medium_007",
+  "source": "public",
+  "difficulty": "medium",
+  "title": "办公楼 HVAC 多模式节能控制",
+  "pou": {
+    "type": "function_block",
+    "name": "HVAC"
+  },
+  "requirement": {
+    "en": "Control a supply fan and temperature setpoint adjustment. Valid selector 0 Auto, 1 Comfort, 2 Economy, 3 Night. Fan runs only after occupancy and non-Night mode hold for 30s. Auto: 0C occupied, +3C energy-saving or +2C standard unoccupied. Comfort: 0/+1. Economy: 0/+4. Night: +4 always. Clamp adjustment within +-4C.",
+    "zh": "控制送风机与温度设定点偏移。selector 有效值 0 自动、1 舒适、2 经济、3 夜间。仅当有人且非夜间模式持续 30s 后风机才运行。自动：有人 0℃，无人节能 +3℃、标准 +2℃；舒适：有人 0℃、无人 +1℃；经济：有人 0℃、无人 +4℃；夜间恒 +4℃。偏移限制在 ±4℃ 内。"
+  },
+  "interface": {
+    "duts": [],
+    "inputs": [
+      {
+        "name": "OCCUPANCY_DETECTED",
+        "type": "BOOL",
+        "desc": "有人检测"
+      },
+      {
+        "name": "ENERGY_SAVING_MODE",
+        "type": "BOOL",
+        "desc": "节能选择"
+      },
+      {
+        "name": "HVAC_MODE_SELECTOR",
+        "type": "INT",
+        "desc": "0 自动 1 舒适 2 经济 3 夜间"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "SUPPLY_FAN_RUN",
+        "type": "BOOL",
+        "desc": "送风机运行"
+      },
+      {
+        "name": "TEMP_SETPOINT_ADJUST",
+        "type": "INT",
+        "desc": "温度设定点偏移(℃)"
+      }
+    ],
+    "inouts": []
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "夜间模式风机不运行。",
+      "formula": "G(HVAC_MODE_SELECTOR = 3 -> !SUPPLY_FAN_RUN)"
+    },
+    {
+      "id": "P2",
+      "description": "设定点偏移在 ±4℃ 内。",
+      "formula": "G(TEMP_SETPOINT_ADJUST >= -4 && TEMP_SETPOINT_ADJUST <= 4)"
+    },
+    {
+      "id": "P3",
+      "description": "自动无人节能时偏移 +3℃。",
+      "formula": "G((HVAC_MODE_SELECTOR = 0 && !OCCUPANCY_DETECTED && ENERGY_SAVING_MODE) -> TEMP_SETPOINT_ADJUST = 3)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "模式与偏移",
+      "scan_ms": 1000,
+      "steps": [
+        {
+          "inputs": {
+            "OCCUPANCY_DETECTED": false,
+            "ENERGY_SAVING_MODE": true,
+            "HVAC_MODE_SELECTOR": 0
+          },
+          "expect": {
+            "TEMP_SETPOINT_ADJUST": 3,
+            "SUPPLY_FAN_RUN": false
+          }
+        },
+        {
+          "inputs": {
+            "OCCUPANCY_DETECTED": true,
+            "ENERGY_SAVING_MODE": true,
+            "HVAC_MODE_SELECTOR": 0
+          },
+          "expect": {
+            "TEMP_SETPOINT_ADJUST": 0,
+            "SUPPLY_FAN_RUN": false
+          }
+        },
+        {
+          "inputs": {
+            "OCCUPANCY_DETECTED": false,
+            "ENERGY_SAVING_MODE": false,
+            "HVAC_MODE_SELECTOR": 3
+          },
+          "expect": {
+            "TEMP_SETPOINT_ADJUST": 4,
+            "SUPPLY_FAN_RUN": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "风机 30s 延时",
+      "scan_ms": 1000,
+      "steps": [
+        {
+          "inputs": {
+            "OCCUPANCY_DETECTED": true,
+            "ENERGY_SAVING_MODE": false,
+            "HVAC_MODE_SELECTOR": 1
+          },
+          "expect": {
+            "SUPPLY_FAN_RUN": false
+          }
+        },
+        {
+          "inputs": {
+            "OCCUPANCY_DETECTED": true,
+            "ENERGY_SAVING_MODE": false,
+            "HVAC_MODE_SELECTOR": 1
+          },
+          "repeat": 29,
+          "expect": {
+            "SUPPLY_FAN_RUN": false
+          }
+        },
+        {
+          "inputs": {
+            "OCCUPANCY_DETECTED": true,
+            "ENERGY_SAVING_MODE": false,
+            "HVAC_MODE_SELECTOR": 1
+          },
+          "repeat": 1,
+          "expect": {
+            "SUPPLY_FAN_RUN": true
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "HVAC",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK HVAC\nVAR_INPUT\n    OCCUPANCY_DETECTED : BOOL;\n    ENERGY_SAVING_MODE : BOOL;\n    HVAC_MODE_SELECTOR : INT;\nEND_VAR\nVAR_OUTPUT\n    SUPPLY_FAN_RUN : BOOL;\n    TEMP_SETPOINT_ADJUST : INT;\nEND_VAR\nVAR\n    fanTon : TON;\n    adjust : INT;\nEND_VAR\n",
+        "implementation": "fanTon(IN := OCCUPANCY_DETECTED AND (HVAC_MODE_SELECTOR <> 3), PT := T#30s);\nSUPPLY_FAN_RUN := fanTon.Q;\nadjust := 0;\nCASE HVAC_MODE_SELECTOR OF\n0:\n    IF OCCUPANCY_DETECTED THEN\n        adjust := 0;\n    ELSIF ENERGY_SAVING_MODE THEN\n        adjust := 3;\n    ELSE\n        adjust := 2;\n    END_IF\n1:\n    IF OCCUPANCY_DETECTED THEN\n        adjust := 0;\n    ELSE\n        adjust := 1;\n    END_IF\n2:\n    IF OCCUPANCY_DETECTED THEN\n        adjust := 0;\n    ELSE\n        adjust := 4;\n    END_IF\n3:\n    adjust := 4;\nEND_CASE\nIF adjust > 4 THEN\n    adjust := 4;\nEND_IF\nIF adjust < -4 THEN\n    adjust := -4;\nEND_IF\nTEMP_SETPOINT_ADJUST := adjust;\n"
+      }
+    ]
+  }
+}

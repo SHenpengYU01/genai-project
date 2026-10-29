@@ -1,0 +1,106 @@
+{
+  "id": "public_medium_008",
+  "source": "public",
+  "difficulty": "medium",
+  "title": "IPv4 地址解析",
+  "pou": {
+    "type": "function_block",
+    "name": "IPv4Parse"
+  },
+  "requirement": {
+    "en": "Parse a dotted-decimal IPv4 string into a 32-bit unsigned integer. Four nonempty decimal segments separated by periods, each 0..255. Network byte order: first segment is the most significant byte. Zero on malformed input.",
+    "zh": "把点分十进制 IPv4 字符串解析为 32 位无符号整数。要求四段非空十进制数、以句点分隔、每段 0..255，按网络字节序拼接(第一段为最高有效字节)。非法输入时 ipValue 置 0。"
+  },
+  "interface": {
+    "duts": [],
+    "inputs": [
+      {
+        "name": "ipText",
+        "type": "STRING(254)",
+        "desc": "待解析的 IPv4 文本"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "ipValue",
+        "type": "UDINT",
+        "desc": "32 位地址(网络字节序)，非法为 0"
+      }
+    ],
+    "inouts": []
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "解析结果合法范围内。",
+      "formula": "G(ipValue <= 16#FFFFFFFF)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "合法地址解析",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "ipText": "192.168.1.1"
+          },
+          "expect": {
+            "ipValue": 3232235777
+          }
+        },
+        {
+          "inputs": {
+            "ipText": "0.0.0.0"
+          },
+          "expect": {
+            "ipValue": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "非法地址置零",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "ipText": "256.1.1.1"
+          },
+          "expect": {
+            "ipValue": 0
+          }
+        },
+        {
+          "inputs": {
+            "ipText": "1.2.3"
+          },
+          "expect": {
+            "ipValue": 0
+          }
+        },
+        {
+          "inputs": {
+            "ipText": "1.2.3.4.5"
+          },
+          "expect": {
+            "ipValue": 0
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "IPv4Parse",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK IPv4Parse\nVAR_INPUT\n    ipText : STRING(254);\nEND_VAR\nVAR_OUTPUT\n    ipValue : UDINT;\nEND_VAR\nVAR\n    i : INT;\n    n : INT;\n    segCount : INT;\n    segVal : INT;\n    result : UDINT;\n    valid : BOOL;\n    started : BOOL;\n    ch : BYTE;\nEND_VAR\n",
+        "implementation": "n := LEN(ipText);\nsegCount := 0;\nsegVal := 0;\nresult := 0;\nvalid := TRUE;\nstarted := FALSE;\nFOR i := 1 TO n DO\n    ch := ipText[i];\n    IF ch = 46 THEN\n        IF NOT started OR segVal > 255 THEN\n            valid := FALSE;\n        END_IF\n        result := SHL(result, 8) OR INT_TO_UDINT(segVal);\n        segCount := segCount + 1;\n        segVal := 0;\n        started := FALSE;\n    ELSIF ch >= 48 AND ch <= 57 THEN\n        started := TRUE;\n        segVal := segVal * 10 + (BYTE_TO_INT(ch) - 48);\n        IF segVal > 255 THEN\n            valid := FALSE;\n        END_IF\n    ELSE\n        valid := FALSE;\n    END_IF\nEND_FOR\nIF NOT started OR segVal > 255 THEN\n    valid := FALSE;\nEND_IF\nresult := SHL(result, 8) OR INT_TO_UDINT(segVal);\nsegCount := segCount + 1;\nIF valid AND segCount = 4 THEN\n    ipValue := result;\nELSE\n    ipValue := 0;\nEND_IF\n"
+      }
+    ]
+  }
+}

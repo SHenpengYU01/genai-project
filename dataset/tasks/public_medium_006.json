@@ -1,0 +1,157 @@
+{
+  "id": "public_medium_006",
+  "source": "public",
+  "difficulty": "medium",
+  "title": "板厚报警与故障历史",
+  "pou": {
+    "type": "function_block",
+    "name": "SlabThickness"
+  },
+  "requirement": {
+    "en": "Monitor slab-thickness faults: when signal valid, alarm immediately on fault and hold each alarm at least 500ms; on each valid fault rising edge increment counter and store FaultTimestamp into history[0] shifting older entries; accumulate runtime by CycleTime only while cutting and no fault; on power-up or invalid signal clear alarm and hold state.",
+    "zh": "监控板厚故障：信号有效时，故障为 TRUE 立即报警且每次报警至少保持 500ms；每次有效故障上升沿使计数器加 1 并把 FaultTimestamp 存入 history[0]、旧记录右移；仅在切割运行且无故障时按 CycleTime 累加运行时间；上电或信号无效时关断报警并清除保持状态。"
+  },
+  "interface": {
+    "duts": [],
+    "inputs": [
+      {
+        "name": "THICKNESS_FAULT",
+        "type": "BOOL",
+        "desc": "厚度超差"
+      },
+      {
+        "name": "THICKNESS_SIGNAL_VALID",
+        "type": "BOOL",
+        "desc": "信号有效"
+      },
+      {
+        "name": "CUTTING_RUN",
+        "type": "BOOL",
+        "desc": "切割运行状态"
+      },
+      {
+        "name": "FaultTimestamp",
+        "type": "DINT",
+        "desc": "故障时间戳(秒)"
+      },
+      {
+        "name": "CycleTime",
+        "type": "TIME",
+        "desc": "调用间隔"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "THICKNESS_ALARM",
+        "type": "BOOL",
+        "desc": "报警(至少 500ms 保持)"
+      },
+      {
+        "name": "Slab_Fault_Counter",
+        "type": "UINT",
+        "desc": "有效故障次数"
+      },
+      {
+        "name": "Slab_Runtime_Accumulator",
+        "type": "LTIME",
+        "desc": "正常切割累计时间"
+      },
+      {
+        "name": "Slab_Fault_History",
+        "type": "ARRAY[0..4] OF DINT",
+        "desc": "最近 5 条故障时间戳"
+      }
+    ],
+    "inouts": []
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "信号无效时不报警。",
+      "formula": "G(!THICKNESS_SIGNAL_VALID -> !THICKNESS_ALARM)"
+    },
+    {
+      "id": "P2",
+      "description": "报警意味着信号有效。",
+      "formula": "G(THICKNESS_ALARM -> THICKNESS_SIGNAL_VALID)"
+    },
+    {
+      "id": "P3",
+      "description": "故障计数单调不减。",
+      "formula": "G(Slab_Fault_Counter <= X(Slab_Fault_Counter))"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "故障记录与计数",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "THICKNESS_FAULT": false,
+            "THICKNESS_SIGNAL_VALID": true,
+            "CUTTING_RUN": false,
+            "FaultTimestamp": 0,
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "THICKNESS_ALARM": false,
+            "Slab_Fault_Counter": 0
+          }
+        },
+        {
+          "inputs": {
+            "THICKNESS_FAULT": true,
+            "THICKNESS_SIGNAL_VALID": true,
+            "CUTTING_RUN": false,
+            "FaultTimestamp": 100,
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "THICKNESS_ALARM": true,
+            "Slab_Fault_Counter": 1,
+            "Slab_Fault_History": [
+              100,
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "信号无效时无记录",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "THICKNESS_FAULT": true,
+            "THICKNESS_SIGNAL_VALID": false,
+            "CUTTING_RUN": false,
+            "FaultTimestamp": 100,
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "THICKNESS_ALARM": false,
+            "Slab_Fault_Counter": 0
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "SlabThickness",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK SlabThickness\nVAR_INPUT\n    THICKNESS_FAULT : BOOL;\n    THICKNESS_SIGNAL_VALID : BOOL;\n    CUTTING_RUN : BOOL;\n    FaultTimestamp : DINT;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    THICKNESS_ALARM : BOOL;\n    Slab_Fault_Counter : UINT;\n    Slab_Runtime_Accumulator : LTIME;\n    Slab_Fault_History : ARRAY[0..4] OF DINT;\nEND_VAR\nVAR\n    holdTof : TOF;\n    faultPrev : BOOL;\n    faultRising : BOOL;\n    i : INT;\nEND_VAR\n",
+        "implementation": "IF NOT THICKNESS_SIGNAL_VALID THEN\n    THICKNESS_ALARM := FALSE;\n    holdTof(IN := FALSE, PT := T#500ms);\n    faultPrev := THICKNESS_FAULT;\nELSE\n    faultRising := THICKNESS_FAULT AND NOT faultPrev;\n    faultPrev := THICKNESS_FAULT;\n    IF faultRising THEN\n        Slab_Fault_Counter := Slab_Fault_Counter + 1;\n        FOR i := 4 TO 1 BY -1 DO\n            Slab_Fault_History[i] := Slab_Fault_History[i - 1];\n        END_FOR\n        Slab_Fault_History[0] := FaultTimestamp;\n    END_IF\n    holdTof(IN := THICKNESS_FAULT, PT := T#500ms);\n    THICKNESS_ALARM := THICKNESS_FAULT OR holdTof.Q;\n    IF CUTTING_RUN AND NOT THICKNESS_FAULT THEN\n        Slab_Runtime_Accumulator := Slab_Runtime_Accumulator + TO_LTIME(CycleTime);\n    END_IF\nEND_IF\n"
+      }
+    ]
+  }
+}

@@ -1,0 +1,299 @@
+{
+  "id": "public_medium_005",
+  "source": "public",
+  "difficulty": "medium",
+  "title": "自动化生产线控制",
+  "pou": {
+    "type": "function_block",
+    "name": "ProductionLine"
+  },
+  "requirement": {
+    "en": "A line moves a product through stations A, B, C. Mode switches manual/automatic. Manual: ForwardButton drives forward, ReverseButton reverse, interlocked. Automatic: SensorA+ButtonA moves forward to B; SensorB stops, ButtonB moves to C; SensorC stops, ButtonC turns on CompletionLight; when SensorC clears the light turns off.",
+    "zh": "生产线把产品依次送过工位 A、B、C。Mode 切换手动/自动。手动：ForwardButton 正转、ReverseButton 反转，且互锁不可同时。自动：SensorA 检测到产品且 ButtonA 确认后正转送向 B；SensorB 检测到后停止，ButtonB 确认后正转送向 C；SensorC 检测到后停止，ButtonC 确认后点亮 CompletionLight；产品被取走(SensorC 消失)后熄灭。"
+  },
+  "interface": {
+    "duts": [],
+    "inputs": [
+      {
+        "name": "Mode",
+        "type": "BOOL",
+        "desc": "0 手动 1 自动"
+      },
+      {
+        "name": "ForwardButton",
+        "type": "BOOL",
+        "desc": "正转按钮"
+      },
+      {
+        "name": "ReverseButton",
+        "type": "BOOL",
+        "desc": "反转按钮"
+      },
+      {
+        "name": "SensorA",
+        "type": "BOOL",
+        "desc": "A 工位传感器"
+      },
+      {
+        "name": "SensorB",
+        "type": "BOOL",
+        "desc": "B 工位传感器"
+      },
+      {
+        "name": "SensorC",
+        "type": "BOOL",
+        "desc": "C 工位传感器"
+      },
+      {
+        "name": "ButtonA",
+        "type": "BOOL",
+        "desc": "A 工位完成按钮"
+      },
+      {
+        "name": "ButtonB",
+        "type": "BOOL",
+        "desc": "B 工位完成按钮"
+      },
+      {
+        "name": "ButtonC",
+        "type": "BOOL",
+        "desc": "C 工位完成按钮"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "MotorForward",
+        "type": "BOOL",
+        "desc": "正转输出"
+      },
+      {
+        "name": "MotorReverse",
+        "type": "BOOL",
+        "desc": "反转输出"
+      },
+      {
+        "name": "CompletionLight",
+        "type": "BOOL",
+        "desc": "完成指示灯"
+      }
+    ],
+    "inouts": []
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "正反转互锁。",
+      "formula": "G(!(MotorForward && MotorReverse))"
+    },
+    {
+      "id": "P2",
+      "description": "手动正转。",
+      "formula": "G((!Mode && ForwardButton && !ReverseButton) -> MotorForward)"
+    },
+    {
+      "id": "P3",
+      "description": "完成灯只在产品位于 C 工位时点亮。",
+      "formula": "G(CompletionLight -> SensorC)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "手动正反转与互锁",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "Mode": false,
+            "ForwardButton": true,
+            "ReverseButton": false,
+            "SensorA": false,
+            "SensorB": false,
+            "SensorC": false,
+            "ButtonA": false,
+            "ButtonB": false,
+            "ButtonC": false
+          },
+          "expect": {
+            "MotorForward": true,
+            "MotorReverse": false
+          }
+        },
+        {
+          "inputs": {
+            "Mode": false,
+            "ForwardButton": false,
+            "ReverseButton": true,
+            "SensorA": false,
+            "SensorB": false,
+            "SensorC": false,
+            "ButtonA": false,
+            "ButtonB": false,
+            "ButtonC": false
+          },
+          "expect": {
+            "MotorForward": false,
+            "MotorReverse": true
+          }
+        },
+        {
+          "inputs": {
+            "Mode": false,
+            "ForwardButton": true,
+            "ReverseButton": true,
+            "SensorA": false,
+            "SensorB": false,
+            "SensorC": false,
+            "ButtonA": false,
+            "ButtonB": false,
+            "ButtonC": false
+          },
+          "expect": {
+            "MotorForward": false,
+            "MotorReverse": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "自动流程 A→B→C",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorA": true,
+            "SensorB": false,
+            "SensorC": false,
+            "ButtonA": true,
+            "ButtonB": false,
+            "ButtonC": false
+          },
+          "expect": {}
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorA": false,
+            "SensorB": false,
+            "SensorC": false,
+            "ButtonA": false,
+            "ButtonB": false,
+            "ButtonC": false
+          },
+          "expect": {
+            "MotorForward": true
+          }
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorA": false,
+            "SensorB": true,
+            "SensorC": false,
+            "ButtonA": false,
+            "ButtonB": false,
+            "ButtonC": false
+          },
+          "expect": {
+            "MotorForward": false
+          }
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorA": false,
+            "SensorB": true,
+            "SensorC": false,
+            "ButtonA": false,
+            "ButtonB": true,
+            "ButtonC": false
+          },
+          "expect": {}
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorA": false,
+            "SensorB": false,
+            "SensorC": false,
+            "ButtonA": false,
+            "ButtonB": false,
+            "ButtonC": false
+          },
+          "expect": {
+            "MotorForward": true
+          }
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorA": false,
+            "SensorB": false,
+            "SensorC": true,
+            "ButtonA": false,
+            "ButtonB": false,
+            "ButtonC": false
+          },
+          "expect": {
+            "MotorForward": false
+          }
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorA": false,
+            "SensorB": false,
+            "SensorC": true,
+            "ButtonA": false,
+            "ButtonB": false,
+            "ButtonC": true
+          },
+          "expect": {}
+        },
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorA": false,
+            "SensorB": false,
+            "SensorC": true,
+            "ButtonA": false,
+            "ButtonB": false,
+            "ButtonC": false
+          },
+          "expect": {
+            "CompletionLight": true
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "ProductionLine",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK ProductionLine\nVAR_INPUT\n    Mode : BOOL;\n    ForwardButton : BOOL;\n    ReverseButton : BOOL;\n    SensorA : BOOL;\n    SensorB : BOOL;\n    SensorC : BOOL;\n    ButtonA : BOOL;\n    ButtonB : BOOL;\n    ButtonC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorForward : BOOL;\n    MotorReverse : BOOL;\n    CompletionLight : BOOL;\nEND_VAR\nVAR\n    stage : INT := 0;\nEND_VAR\n",
+        "implementation": "MotorForward := FALSE;\nMotorReverse := FALSE;\nCompletionLight := FALSE;\nIF NOT Mode THEN\n    IF ReverseButton AND NOT ForwardButton THEN\n        MotorReverse := TRUE;\n    ELSIF ForwardButton AND NOT ReverseButton THEN\n        MotorForward := TRUE;\n    END_IF\n    stage := 0;\nELSE\n    CASE stage OF\n    0:\n        IF SensorA AND ButtonA THEN\n            stage := 1;\n        END_IF\n    1:\n        MotorForward := TRUE;\n        IF SensorB THEN\n            stage := 2;\n        END_IF\n    2:\n        IF ButtonB THEN\n            stage := 3;\n        END_IF\n    3:\n        MotorForward := TRUE;\n        IF SensorC THEN\n            stage := 4;\n        END_IF\n    4:\n        IF ButtonC THEN\n            stage := 5;\n        END_IF\n    5:\n        CompletionLight := TRUE;\n        IF NOT SensorC THEN\n            stage := 0;\n        END_IF\n    END_CASE\nEND_IF\n"
+      }
+    ]
+  }
+}
