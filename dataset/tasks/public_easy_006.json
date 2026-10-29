@@ -1,0 +1,216 @@
+{
+  "id": "public_easy_006",
+  "source": "public",
+  "difficulty": "easy",
+  "title": "曝气风机延时启动",
+  "pou": {
+    "type": "function_block",
+    "name": "AerationBlower"
+  },
+  "requirement": {
+    "en": "Control an aeration blower: start timing when DO_LOW and AERATION_E_STOP_NC are both TRUE; BLOWER_RUN only after these conditions hold for 5 seconds; if DO_LOW goes FALSE or an e-stop occurs, disable BLOWER_RUN and reset the timer; increment AERATION_BLOWER_CYCLE_COUNT on each FALSE-to-TRUE of BLOWER_RUN; initialize blower off and count zero.",
+    "zh": "控制曝气风机：当 DO_LOW 与 AERATION_E_STOP_NC 均为 TRUE 时开始计时，条件持续 满足 5 秒后才允许 BLOWER_RUN；若 DO_LOW 变 FALSE 或急停，立即关断 BLOWER_RUN 并复位计时器；在 BLOWER_RUN 每次由 FALSE 变 TRUE 时对 AERATION_BLOWER_CYCLE_COUNT 加 1；上电时风机关断、计数为 0。"
+  },
+  "interface": {
+    "duts": [],
+    "inputs": [
+      {
+        "name": "DO_LOW",
+        "type": "BOOL",
+        "desc": "溶解氧低于阈值需曝气"
+      },
+      {
+        "name": "AERATION_E_STOP_NC",
+        "type": "BOOL",
+        "desc": "常闭急停，TRUE 未触发"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "BLOWER_RUN",
+        "type": "BOOL",
+        "desc": "风机运行命令"
+      },
+      {
+        "name": "AERATION_BLOWER_CYCLE_COUNT",
+        "type": "UINT",
+        "desc": "实际启动次数"
+      }
+    ],
+    "inouts": []
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "急停优先：急停时风机必须停止。",
+      "formula": "G(!AERATION_E_STOP_NC -> !BLOWER_RUN)"
+    },
+    {
+      "id": "P2",
+      "description": "无需求时风机不运行。",
+      "formula": "G(BLOWER_RUN -> DO_LOW)"
+    },
+    {
+      "id": "P3",
+      "description": "启动计数单调不减。",
+      "formula": "G(AERATION_BLOWER_CYCLE_COUNT <= X(AERATION_BLOWER_CYCLE_COUNT))"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "5 秒延时启动与计数",
+      "scan_ms": 1000,
+      "steps": [
+        {
+          "inputs": {
+            "DO_LOW": true,
+            "AERATION_E_STOP_NC": true
+          },
+          "expect": {
+            "BLOWER_RUN": false,
+            "AERATION_BLOWER_CYCLE_COUNT": 0
+          }
+        },
+        {
+          "inputs": {
+            "DO_LOW": true,
+            "AERATION_E_STOP_NC": true
+          },
+          "expect": {
+            "BLOWER_RUN": false,
+            "AERATION_BLOWER_CYCLE_COUNT": 0
+          }
+        },
+        {
+          "inputs": {
+            "DO_LOW": true,
+            "AERATION_E_STOP_NC": true
+          },
+          "expect": {
+            "BLOWER_RUN": false,
+            "AERATION_BLOWER_CYCLE_COUNT": 0
+          }
+        },
+        {
+          "inputs": {
+            "DO_LOW": true,
+            "AERATION_E_STOP_NC": true
+          },
+          "expect": {
+            "BLOWER_RUN": false,
+            "AERATION_BLOWER_CYCLE_COUNT": 0
+          }
+        },
+        {
+          "inputs": {
+            "DO_LOW": true,
+            "AERATION_E_STOP_NC": true
+          },
+          "expect": {
+            "BLOWER_RUN": true,
+            "AERATION_BLOWER_CYCLE_COUNT": 1
+          }
+        },
+        {
+          "inputs": {
+            "DO_LOW": true,
+            "AERATION_E_STOP_NC": true
+          },
+          "expect": {
+            "BLOWER_RUN": true,
+            "AERATION_BLOWER_CYCLE_COUNT": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "需求消失复位计时并重新计数",
+      "scan_ms": 1000,
+      "steps": [
+        {
+          "inputs": {
+            "DO_LOW": true,
+            "AERATION_E_STOP_NC": true
+          },
+          "expect": {
+            "BLOWER_RUN": false,
+            "AERATION_BLOWER_CYCLE_COUNT": 0
+          }
+        },
+        {
+          "inputs": {
+            "DO_LOW": true,
+            "AERATION_E_STOP_NC": true
+          },
+          "expect": {
+            "BLOWER_RUN": false,
+            "AERATION_BLOWER_CYCLE_COUNT": 0
+          }
+        },
+        {
+          "inputs": {
+            "DO_LOW": true,
+            "AERATION_E_STOP_NC": true
+          },
+          "expect": {
+            "BLOWER_RUN": false,
+            "AERATION_BLOWER_CYCLE_COUNT": 0
+          }
+        },
+        {
+          "inputs": {
+            "DO_LOW": true,
+            "AERATION_E_STOP_NC": true
+          },
+          "expect": {
+            "BLOWER_RUN": false,
+            "AERATION_BLOWER_CYCLE_COUNT": 0
+          }
+        },
+        {
+          "inputs": {
+            "DO_LOW": true,
+            "AERATION_E_STOP_NC": true
+          },
+          "expect": {
+            "BLOWER_RUN": true,
+            "AERATION_BLOWER_CYCLE_COUNT": 1
+          }
+        },
+        {
+          "inputs": {
+            "DO_LOW": false,
+            "AERATION_E_STOP_NC": true
+          },
+          "expect": {
+            "BLOWER_RUN": false,
+            "AERATION_BLOWER_CYCLE_COUNT": 1
+          }
+        },
+        {
+          "inputs": {
+            "DO_LOW": true,
+            "AERATION_E_STOP_NC": true
+          },
+          "expect": {
+            "BLOWER_RUN": false,
+            "AERATION_BLOWER_CYCLE_COUNT": 1
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "AerationBlower",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK AerationBlower\nVAR_INPUT\n    DO_LOW : BOOL;\n    AERATION_E_STOP_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    BLOWER_RUN : BOOL;\n    AERATION_BLOWER_CYCLE_COUNT : UINT;\nEND_VAR\nVAR\n    startTon : TON;\n    runTrig : R_TRIG;\nEND_VAR\n",
+        "implementation": "startTon(IN := DO_LOW AND AERATION_E_STOP_NC, PT := T#5s);\nBLOWER_RUN := startTon.Q;\nrunTrig(CLK := BLOWER_RUN);\nIF runTrig.Q THEN\n    AERATION_BLOWER_CYCLE_COUNT := AERATION_BLOWER_CYCLE_COUNT + 1;\nEND_IF\n"
+      }
+    ]
+  }
+}

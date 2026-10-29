@@ -1,0 +1,181 @@
+{
+  "id": "public_easy_002",
+  "source": "public",
+  "difficulty": "easy",
+  "title": "双字边沿检测",
+  "pou": {
+    "type": "function_block",
+    "name": "EdgeDetect"
+  },
+  "requirement": {
+    "en": "Write a function block that checks every cycle for rising and falling edges in each bit of a DWORD input value, and reports changes, rising edges and falling edges.",
+    "zh": "写一个功能块，每个周期检查双字(DWORD)输入 value 的每一位是否出现上升沿或下降沿，并报告是否有变化、是否有上升沿/下降沿、对应位流及边沿数量。"
+  },
+  "interface": {
+    "duts": [],
+    "inputs": [
+      {
+        "name": "value",
+        "type": "DWORD",
+        "desc": "待检测的输入值"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "hasChanged",
+        "type": "BOOL",
+        "desc": "输入值是否发生变化"
+      },
+      {
+        "name": "hasRisingEdges",
+        "type": "BOOL",
+        "desc": "是否出现上升沿"
+      },
+      {
+        "name": "risingBits",
+        "type": "DWORD",
+        "desc": "上升沿位流"
+      },
+      {
+        "name": "noOfRisingBits",
+        "type": "USINT",
+        "desc": "上升沿数量"
+      },
+      {
+        "name": "hasFallingEdges",
+        "type": "BOOL",
+        "desc": "是否出现下降沿"
+      },
+      {
+        "name": "fallingBits",
+        "type": "DWORD",
+        "desc": "下降沿位流"
+      },
+      {
+        "name": "noOfFallingBits",
+        "type": "USINT",
+        "desc": "下降沿数量"
+      }
+    ],
+    "inouts": []
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "只要有变化，就至少有一个上升或下降沿。",
+      "formula": "G(hasChanged -> (risingBits <> 0 || fallingBits <> 0))"
+    },
+    {
+      "id": "P2",
+      "description": "上升沿标志与上升沿位流一致。",
+      "formula": "G((risingBits <> 0) <-> hasRisingEdges)"
+    },
+    {
+      "id": "P3",
+      "description": "下降沿标志与下降沿位流一致。",
+      "formula": "G((fallingBits <> 0) <-> hasFallingEdges)"
+    },
+    {
+      "id": "P4",
+      "description": "同一位不可能同时上升和下降。",
+      "formula": "G((risingBits AND fallingBits) = 0)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "上升沿检测",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "value": 0
+          },
+          "expect": {
+            "hasChanged": false,
+            "hasRisingEdges": false,
+            "risingBits": 0,
+            "noOfRisingBits": 0,
+            "hasFallingEdges": false,
+            "fallingBits": 0,
+            "noOfFallingBits": 0
+          }
+        },
+        {
+          "inputs": {
+            "value": 5
+          },
+          "expect": {
+            "hasChanged": true,
+            "hasRisingEdges": true,
+            "risingBits": 5,
+            "noOfRisingBits": 2,
+            "hasFallingEdges": false,
+            "fallingBits": 0,
+            "noOfFallingBits": 0
+          }
+        },
+        {
+          "inputs": {
+            "value": 5
+          },
+          "expect": {
+            "hasChanged": false,
+            "hasRisingEdges": false,
+            "risingBits": 0,
+            "noOfRisingBits": 0,
+            "hasFallingEdges": false,
+            "fallingBits": 0,
+            "noOfFallingBits": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "下降沿与混合边沿",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "value": 5
+          },
+          "expect": {
+            "hasChanged": false,
+            "hasRisingEdges": false,
+            "risingBits": 0,
+            "noOfRisingBits": 0,
+            "hasFallingEdges": false,
+            "fallingBits": 0,
+            "noOfFallingBits": 0
+          }
+        },
+        {
+          "inputs": {
+            "value": 1
+          },
+          "expect": {
+            "hasChanged": true,
+            "hasRisingEdges": false,
+            "risingBits": 0,
+            "noOfRisingBits": 0,
+            "hasFallingEdges": true,
+            "fallingBits": 4,
+            "noOfFallingBits": 1
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "EdgeDetect",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK EdgeDetect\nVAR_INPUT\n    value : DWORD;\nEND_VAR\nVAR_OUTPUT\n    hasChanged : BOOL;\n    hasRisingEdges : BOOL;\n    risingBits : DWORD;\n    noOfRisingBits : USINT;\n    hasFallingEdges : BOOL;\n    fallingBits : DWORD;\n    noOfFallingBits : USINT;\nEND_VAR\nVAR\n    prev : DWORD;\n    i : INT;\n    mask : DWORD;\nEND_VAR\n",
+        "implementation": "risingBits := 0;\nfallingBits := 0;\nnoOfRisingBits := 0;\nnoOfFallingBits := 0;\nhasRisingEdges := FALSE;\nhasFallingEdges := FALSE;\nFOR i := 0 TO 31 DO\n    mask := SHL(DWORD#1, i);\n    IF ((value AND mask) <> 0) AND ((prev AND mask) = 0) THEN\n        risingBits := risingBits OR mask;\n        noOfRisingBits := noOfRisingBits + 1;\n        hasRisingEdges := TRUE;\n    ELSIF ((value AND mask) = 0) AND ((prev AND mask) <> 0) THEN\n        fallingBits := fallingBits OR mask;\n        noOfFallingBits := noOfFallingBits + 1;\n        hasFallingEdges := TRUE;\n    END_IF\nEND_FOR\nhasChanged := (value <> prev);\nprev := value;\n"
+      }
+    ]
+  }
+}

@@ -1,0 +1,93 @@
+{
+ "jobs": [
+  {
+   "id": "01_fb_good",
+   "pous": [
+    {
+     "name": "MotorCtrl",
+     "kind": "function_block",
+     "declaration": "FUNCTION_BLOCK MotorCtrl\nVAR_INPUT\n    StartBtn : BOOL;\n    StopBtn : BOOL;\n    EStop : BOOL;\nEND_VAR\nVAR_OUTPUT\n    Motor : BOOL;\nEND_VAR\n",
+     "implementation": "(* stop and e-stop have priority over start *)\nIF StopBtn OR EStop THEN\n    Motor := FALSE;\nELSIF StartBtn THEN\n    Motor := TRUE;\nEND_IF\n"
+    }
+   ]
+  },
+  {
+   "id": "02_fb_bad_standalone",
+   "pous": [
+    {
+     "name": "MotorCtrlBad",
+     "kind": "function_block",
+     "declaration": "FUNCTION_BLOCK MotorCtrlBad\nVAR_INPUT\n    StartBtn : BOOL;\nEND_VAR\nVAR_OUTPUT\n    Motor : BOOL;\nEND_VAR\n",
+     "implementation": "Motor := StartBtn;\nundeclared_var := 42;\n"
+    }
+   ]
+  },
+  {
+   "id": "03_program_good",
+   "pous": [
+    {
+     "name": "PLC_PRG",
+     "kind": "program",
+     "declaration": "PROGRAM PLC_PRG\nVAR\n    counter : INT;\nEND_VAR\n",
+     "implementation": "counter := counter + 1;\nIF counter > 100 THEN\n    counter := 0;\nEND_IF\n"
+    }
+   ]
+  },
+  {
+   "id": "04_unicode_good",
+   "pous": [
+    {
+     "name": "UniCase",
+     "kind": "function_block",
+     "declaration": "FUNCTION_BLOCK UniCase\nVAR\n    msg : STRING(80);\nEND_VAR\n",
+     "implementation": "(* 中文注释：验证 UTF-8 链路 *)\nmsg := '急停已触发';\n"
+    }
+   ]
+  },
+  {
+   "id": "05_function_bad",
+   "pous": [
+    {
+     "name": "ClampIt",
+     "kind": "function",
+     "declaration": "FUNCTION ClampIt : INT\nVAR_INPUT\n    a : INT;\nEND_VAR\n",
+     "implementation": "ClampIt := a;\nbad_identifier := 7;\n"
+    }
+   ]
+  },
+  {
+   "id": "06_function_inout_unwired",
+   "pous": [
+    {
+     "name": "SwapInOut",
+     "kind": "function",
+     "declaration": "FUNCTION SwapInOut : BOOL\nVAR_IN_OUT\n    a : INT;\n    b : INT;\nEND_VAR\nVAR\n    t : INT;\nEND_VAR\n",
+     "implementation": "t := a;\na := b;\nb := t;\nSwapInOut := TRUE;\nbad_inout_var := 1;\n"
+    }
+   ]
+  },
+  {
+   "id": "07_multi_pou_good",
+   "pous": [
+    {
+     "name": "Helper",
+     "kind": "function",
+     "declaration": "FUNCTION Helper : INT\nVAR_INPUT\n    x : INT;\n    y : INT;\nEND_VAR\n",
+     "implementation": "Helper := x + y;\n"
+    },
+    {
+     "name": "MotorFB",
+     "kind": "function_block",
+     "declaration": "FUNCTION_BLOCK MotorFB\nVAR_INPUT\n    run : BOOL;\nEND_VAR\nVAR_OUTPUT\n    out : INT;\nEND_VAR\n",
+     "implementation": "IF run THEN\n    out := Helper(1, 2);\nELSE\n    out := 0;\nEND_IF\n"
+    },
+    {
+     "name": "PLC_PRG",
+     "kind": "program",
+     "declaration": "PROGRAM PLC_PRG\nVAR\n    m : MotorFB;\n    v : INT;\nEND_VAR\n",
+     "implementation": "m(run := TRUE);\nv := m.out;\n"
+    }
+   ]
+  }
+ ]
+}

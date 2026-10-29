@@ -1,0 +1,12 @@
+{
+ "id": "motor_start_stop_good",
+ "pous": [
+  {
+   "name": "MotorCtrl",
+   "kind": "function_block",
+   "declaration": "FUNCTION_BLOCK MotorCtrl\nVAR_INPUT\n    StartBtn : BOOL;\n    StopBtn : BOOL;\n    EStop : BOOL;\nEND_VAR\nVAR_OUTPUT\n    Motor : BOOL;\nEND_VAR\n",
+   "implementation": "(* stop and e-stop have priority over start *)\nIF StopBtn OR EStop THEN\n    Motor := FALSE;\nELSIF StartBtn THEN\n    Motor := TRUE;\nEND_IF\n"
+  }
+ ],
+ "include_message_attrs": true
+}

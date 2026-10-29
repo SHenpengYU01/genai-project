@@ -1,0 +1,61 @@
+{
+  "id": "example_motor",
+  "source": "self_built",
+  "difficulty": "easy",
+  "title": "电机启停控制",
+  "pou": { "type": "function_block", "name": "MotorCtrl" },
+  "requirement": {
+    "zh": "设计一个电机启停控制功能块，包含启动按钮 StartBtn、停止按钮 StopBtn、急停信号 EStop 三个布尔输入，以及电机运行状态 Motor 一个布尔输出。系统初始化时电机处于停止状态。当启动按钮按下，且停止按钮和急停信号均未触发时，电机启动；启动按钮松开后，电机保持运行状态。当停止按钮按下或急停信号触发时，电机停止，且停止和急停的优先级高于启动。",
+    "en": "Design a motor start/stop function block with three boolean inputs StartBtn, StopBtn, EStop and one boolean output Motor. The motor is initially stopped. When StartBtn is pressed and neither StopBtn nor EStop is active, the motor starts; after StartBtn is released the motor stays running. When StopBtn is pressed or EStop is active, the motor stops, and stop/e-stop take priority over start."
+  },
+  "interface": {
+    "duts": [],
+    "inputs": [
+      { "name": "StartBtn", "type": "BOOL", "desc": "启动按钮" },
+      { "name": "StopBtn", "type": "BOOL", "desc": "停止按钮" },
+      { "name": "EStop", "type": "BOOL", "desc": "急停信号" }
+    ],
+    "outputs": [
+      { "name": "Motor", "type": "BOOL", "desc": "电机运行状态" }
+    ],
+    "inouts": []
+  },
+  "ltl_specs": [
+    { "id": "P1", "description": "停止安全性：停止按钮或急停信号触发时，电机必须停止。",
+      "formula": "G((StopBtn || EStop) -> X(!Motor))" },
+    { "id": "P2", "description": "正常启动：启动按下且无停止/急停时，电机必须启动。",
+      "formula": "G((StartBtn && !StopBtn && !EStop) -> X(Motor))" }
+  ],
+  "test_cases": [
+    { "id": "TC1", "description": "正常启动与保持", "scan_ms": 10,
+      "steps": [
+        { "inputs": { "StartBtn": false, "StopBtn": false, "EStop": false }, "expect": { "Motor": false } },
+        { "inputs": { "StartBtn": true,  "StopBtn": false, "EStop": false }, "expect": { "Motor": true } },
+        { "inputs": { "StartBtn": false, "StopBtn": false, "EStop": false }, "expect": { "Motor": true } }
+      ] },
+    { "id": "TC2", "description": "停止优先于启动", "scan_ms": 10,
+      "steps": [
+        { "inputs": { "StartBtn": true,  "StopBtn": false, "EStop": false }, "expect": { "Motor": true } },
+        { "inputs": { "StartBtn": true,  "StopBtn": true,  "EStop": false }, "expect": { "Motor": false } },
+        { "inputs": { "StartBtn": true,  "StopBtn": false, "EStop": false }, "expect": { "Motor": true } }
+      ] },
+    { "id": "TC3", "description": "急停优先并复位", "scan_ms": 10,
+      "steps": [
+        { "inputs": { "StartBtn": false, "StopBtn": false, "EStop": false }, "expect": { "Motor": false } },
+        { "inputs": { "StartBtn": true,  "StopBtn": false, "EStop": false }, "expect": { "Motor": true } },
+        { "inputs": { "StartBtn": false, "StopBtn": false, "EStop": true  }, "expect": { "Motor": false } },
+        { "inputs": { "StartBtn": false, "StopBtn": false, "EStop": false }, "expect": { "Motor": false } }
+      ] }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "MotorCtrl",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK MotorCtrl\nVAR_INPUT\n    StartBtn : BOOL;\n    StopBtn : BOOL;\n    EStop : BOOL;\nEND_VAR\nVAR_OUTPUT\n    Motor : BOOL;\nEND_VAR\n",
+        "implementation": "(* stop and e-stop have priority over start *)\nIF StopBtn OR EStop THEN\n    Motor := FALSE;\nELSIF StartBtn THEN\n    Motor := TRUE;\nEND_IF\n"
+      }
+    ]
+  }
+}

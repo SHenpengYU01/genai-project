@@ -1,0 +1,154 @@
+{
+  "id": "public_easy_005",
+  "source": "public",
+  "difficulty": "easy",
+  "title": "焊缝间隙报警与启动抑制",
+  "pou": {
+    "type": "function_block",
+    "name": "WeldGap"
+  },
+  "requirement": {
+    "en": "Control a weld-gap alarm: power-up 5-second initialization inhibition (Operator_Alert FALSE, Weld_Soft_Start_Active TRUE, no debounce accumulation); after init, alarm only after Gap_Exceeded stays TRUE for DebounceTime; signal FALSE switches off the alarm and clears debounce; e-stop priority immediately clears Operator_Alert and debounce.",
+    "zh": "控制焊缝间隙报警：上电后有 5 秒初始化抑制期（Operator_Alert 为 FALSE、Weld_Soft_Start_Active 为 TRUE、间隙去抖不累计）；初始化后仅当 Gap_Exceeded 持续 DebounceTime 后才报警，信号变 FALSE 立即关断报警并清除去抖；急停优先，立即关断 Operator_Alert 并清除去抖计时。"
+  },
+  "interface": {
+    "duts": [],
+    "inputs": [
+      {
+        "name": "Gap_Exceeded",
+        "type": "BOOL",
+        "desc": "间隙超限信号"
+      },
+      {
+        "name": "Weld_E_Stop_NC",
+        "type": "BOOL",
+        "desc": "常闭急停，TRUE 表示未触发"
+      },
+      {
+        "name": "DebounceTime",
+        "type": "TIME",
+        "desc": "去抖时长"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "Operator_Alert",
+        "type": "BOOL",
+        "desc": "声光报警命令"
+      },
+      {
+        "name": "Weld_Soft_Start_Active",
+        "type": "BOOL",
+        "desc": "上电抑制状态"
+      }
+    ],
+    "inouts": []
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "急停优先：急停时不允许报警。",
+      "formula": "G(!Weld_E_Stop_NC -> !Operator_Alert)"
+    },
+    {
+      "id": "P2",
+      "description": "初始化抑制期不报警。",
+      "formula": "G(Weld_Soft_Start_Active -> !Operator_Alert)"
+    },
+    {
+      "id": "P3",
+      "description": "报警意味着间隙当前超限。",
+      "formula": "G(Operator_Alert -> Gap_Exceeded)"
+    },
+    {
+      "id": "P4",
+      "description": "初始化抑制期最终会结束。",
+      "formula": "G(F(!Weld_Soft_Start_Active))"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "初始化抑制期后去抖报警并复位",
+      "scan_ms": 20,
+      "steps": [
+        {
+          "inputs": {
+            "Gap_Exceeded": true,
+            "Weld_E_Stop_NC": true,
+            "DebounceTime": "T#100ms"
+          },
+          "repeat": 100,
+          "expect": {
+            "Weld_Soft_Start_Active": true,
+            "Operator_Alert": false
+          }
+        },
+        {
+          "inputs": {
+            "Gap_Exceeded": true,
+            "Weld_E_Stop_NC": true,
+            "DebounceTime": "T#100ms"
+          },
+          "repeat": 150,
+          "expect": {
+            "Weld_Soft_Start_Active": false,
+            "Operator_Alert": false
+          }
+        },
+        {
+          "inputs": {
+            "Gap_Exceeded": true,
+            "Weld_E_Stop_NC": true,
+            "DebounceTime": "T#100ms"
+          },
+          "repeat": 5,
+          "expect": {
+            "Operator_Alert": true
+          }
+        },
+        {
+          "inputs": {
+            "Gap_Exceeded": false,
+            "Weld_E_Stop_NC": true,
+            "DebounceTime": "T#100ms"
+          },
+          "repeat": 1,
+          "expect": {
+            "Operator_Alert": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "急停优先于初始化和正常监控",
+      "scan_ms": 20,
+      "steps": [
+        {
+          "inputs": {
+            "Gap_Exceeded": true,
+            "Weld_E_Stop_NC": false,
+            "DebounceTime": "T#100ms"
+          },
+          "repeat": 1,
+          "expect": {
+            "Weld_Soft_Start_Active": true,
+            "Operator_Alert": false
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "WeldGap",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK WeldGap\nVAR_INPUT\n    Gap_Exceeded : BOOL;\n    Weld_E_Stop_NC : BOOL;\n    DebounceTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    Operator_Alert : BOOL;\n    Weld_Soft_Start_Active : BOOL;\nEND_VAR\nVAR\n    initTon : TON;\n    debounceTon : TON;\nEND_VAR\n",
+        "implementation": "initTon(IN := TRUE, PT := T#5s);\nWeld_Soft_Start_Active := NOT initTon.Q;\nIF NOT Weld_E_Stop_NC THEN\n    Operator_Alert := FALSE;\n    debounceTon(IN := FALSE, PT := DebounceTime);\nELSIF initTon.Q THEN\n    debounceTon(IN := Gap_Exceeded, PT := DebounceTime);\n    Operator_Alert := debounceTon.Q;\nELSE\n    Operator_Alert := FALSE;\n    debounceTon(IN := FALSE, PT := DebounceTime);\nEND_IF\n"
+      }
+    ]
+  }
+}

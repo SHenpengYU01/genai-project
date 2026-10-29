@@ -1,0 +1,230 @@
+{
+  "id": "public_easy_003",
+  "source": "public",
+  "difficulty": "easy",
+  "title": "带滞环的报警处理",
+  "pou": {
+    "type": "function_block",
+    "name": "AlarmHyst"
+  },
+  "requirement": {
+    "en": "Implement an alarm with hysteresis. When Value > hiLevel trigger hiAlarm; when Value < hiLevel-hystWindow exit hiAlarm. When Value < loLevel trigger loAlarm; when Value > loLevel+hystWindow exit loAlarm. If loLevel >= hiLevel output error=true status=16#8001 and exit. If hystWindow >= hiLevel-loLevel output error=true status=16#8002.",
+    "zh": "实现带滞环的报警：当 Value>hiLevel 时触发高报警 hiAlarm，当 Value<hiLevel-hystWindow 时退出高报警；当 Value<loLevel 时触发低报警 loAlarm，当 Value>loLevel+hystWindow 时退出低报警。若 loLevel>=hiLevel 则输出 error=true、status=16#8001 并退出；若 hystWindow>=hiLevel-loLevel 则输出 error=true、status=16#8002。"
+  },
+  "interface": {
+    "duts": [],
+    "inputs": [
+      {
+        "name": "Value",
+        "type": "REAL",
+        "desc": "输入值"
+      },
+      {
+        "name": "hiLevel",
+        "type": "REAL",
+        "desc": "高报警限"
+      },
+      {
+        "name": "loLevel",
+        "type": "REAL",
+        "desc": "低报警限"
+      },
+      {
+        "name": "hystWindow",
+        "type": "REAL",
+        "desc": "滞环窗口"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "hiAlarm",
+        "type": "BOOL",
+        "desc": "高报警"
+      },
+      {
+        "name": "loAlarm",
+        "type": "BOOL",
+        "desc": "低报警"
+      },
+      {
+        "name": "error",
+        "type": "BOOL",
+        "desc": "配置错误"
+      },
+      {
+        "name": "status",
+        "type": "WORD",
+        "desc": "状态码"
+      }
+    ],
+    "inouts": []
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "超上限触发高报警。",
+      "formula": "G((!error && Value > hiLevel) -> hiAlarm)"
+    },
+    {
+      "id": "P2",
+      "description": "低于回差下限退出高报警。",
+      "formula": "G((!error && Value < hiLevel - hystWindow) -> !hiAlarm)"
+    },
+    {
+      "id": "P3",
+      "description": "低于下限触发低报警。",
+      "formula": "G((!error && Value < loLevel) -> loAlarm)"
+    },
+    {
+      "id": "P4",
+      "description": "高于回差上限退出低报警。",
+      "formula": "G((!error && Value > loLevel + hystWindow) -> !loAlarm)"
+    },
+    {
+      "id": "P5",
+      "description": "上下限颠倒时报配置错误。",
+      "formula": "G((loLevel >= hiLevel) -> error)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "高报警触发与滞环保持",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "Value": 50.0,
+            "hiLevel": 80.0,
+            "loLevel": 20.0,
+            "hystWindow": 5.0
+          },
+          "expect": {
+            "hiAlarm": false,
+            "loAlarm": false,
+            "error": false
+          }
+        },
+        {
+          "inputs": {
+            "Value": 85.0,
+            "hiLevel": 80.0,
+            "loLevel": 20.0,
+            "hystWindow": 5.0
+          },
+          "expect": {
+            "hiAlarm": true
+          }
+        },
+        {
+          "inputs": {
+            "Value": 82.0,
+            "hiLevel": 80.0,
+            "loLevel": 20.0,
+            "hystWindow": 5.0
+          },
+          "expect": {
+            "hiAlarm": true
+          }
+        },
+        {
+          "inputs": {
+            "Value": 74.0,
+            "hiLevel": 80.0,
+            "loLevel": 20.0,
+            "hystWindow": 5.0
+          },
+          "expect": {
+            "hiAlarm": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "低报警触发与滞环保持",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "Value": 15.0,
+            "hiLevel": 80.0,
+            "loLevel": 20.0,
+            "hystWindow": 5.0
+          },
+          "expect": {
+            "loAlarm": true
+          }
+        },
+        {
+          "inputs": {
+            "Value": 24.0,
+            "hiLevel": 80.0,
+            "loLevel": 20.0,
+            "hystWindow": 5.0
+          },
+          "expect": {
+            "loAlarm": true
+          }
+        },
+        {
+          "inputs": {
+            "Value": 26.0,
+            "hiLevel": 80.0,
+            "loLevel": 20.0,
+            "hystWindow": 5.0
+          },
+          "expect": {
+            "loAlarm": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC3",
+      "description": "配置错误",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "Value": 50.0,
+            "hiLevel": 50.0,
+            "loLevel": 60.0,
+            "hystWindow": 5.0
+          },
+          "expect": {
+            "error": true,
+            "status": 32769,
+            "hiAlarm": false,
+            "loAlarm": false
+          }
+        },
+        {
+          "inputs": {
+            "Value": 50.0,
+            "hiLevel": 80.0,
+            "loLevel": 20.0,
+            "hystWindow": 70.0
+          },
+          "expect": {
+            "error": true,
+            "status": 32770,
+            "hiAlarm": false,
+            "loAlarm": false
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "AlarmHyst",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK AlarmHyst\nVAR_INPUT\n    Value : REAL;\n    hiLevel : REAL;\n    loLevel : REAL;\n    hystWindow : REAL;\nEND_VAR\nVAR_OUTPUT\n    hiAlarm : BOOL;\n    loAlarm : BOOL;\n    error : BOOL;\n    status : WORD;\nEND_VAR\n",
+        "implementation": "error := FALSE;\nstatus := 0;\nIF loLevel >= hiLevel THEN\n    error := TRUE;\n    status := 16#8001;\n    hiAlarm := FALSE;\n    loAlarm := FALSE;\n    RETURN;\nEND_IF\nIF hystWindow >= (hiLevel - loLevel) THEN\n    error := TRUE;\n    status := 16#8002;\n    hiAlarm := FALSE;\n    loAlarm := FALSE;\n    RETURN;\nEND_IF\nIF Value > hiLevel THEN\n    hiAlarm := TRUE;\nELSIF Value < (hiLevel - hystWindow) THEN\n    hiAlarm := FALSE;\nEND_IF\nIF Value < loLevel THEN\n    loAlarm := TRUE;\nELSIF Value > (loLevel + hystWindow) THEN\n    loAlarm := FALSE;\nEND_IF\n"
+      }
+    ]
+  }
+}

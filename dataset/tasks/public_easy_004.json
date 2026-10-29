@@ -1,0 +1,289 @@
+{
+  "id": "public_easy_004",
+  "source": "public",
+  "difficulty": "easy",
+  "title": "果酱泵去抖与运行维护",
+  "pou": {
+    "type": "function_block",
+    "name": "JamPump"
+  },
+  "requirement": {
+    "en": "Control a jam transfer pump: debounce VISCOSITY_OK for DebounceTime before accepting it; allow VFD_RUN only when PASTE_E_STOP_NC and the debounced viscosity condition hold; e-stop immediately disables the run output and clears incomplete debounce; accumulate PUMP_RUNTIME_ACC by CycleTime only while VFD_RUN; set PUMP_MAINT_DUE when runtime reaches 500 hours; initialize run off, runtime zero and maintenance false at power-up.",
+    "zh": "控制果酱输送泵：VISCOSITY_OK 需保持 DebounceTime 时长后才视为有效，失粘立即失效；仅当 PASTE_E_STOP_NC 为 TRUE 且粘度有效时允许 VFD_RUN；急停立即关断运行并清除未完成的去抖计时；仅在 VFD_RUN 为 TRUE 时按 CycleTime 累加 PUMP_RUNTIME_ACC；累计到 500 小时时置位 PUMP_MAINT_DUE；上电时运行关断、累计清零、维护指示为 FALSE。"
+  },
+  "interface": {
+    "duts": [],
+    "inputs": [
+      {
+        "name": "VISCOSITY_OK",
+        "type": "BOOL",
+        "desc": "粘度正常原始信号"
+      },
+      {
+        "name": "PASTE_E_STOP_NC",
+        "type": "BOOL",
+        "desc": "常闭急停，TRUE 允许运行"
+      },
+      {
+        "name": "DebounceTime",
+        "type": "TIME",
+        "desc": "去抖时长"
+      },
+      {
+        "name": "CycleTime",
+        "type": "TIME",
+        "desc": "本次调用的实际时间间隔"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "VFD_RUN",
+        "type": "BOOL",
+        "desc": "泵运行命令"
+      },
+      {
+        "name": "PUMP_MAINT_DUE",
+        "type": "BOOL",
+        "desc": "维护到期指示"
+      },
+      {
+        "name": "PUMP_RUNTIME_ACC",
+        "type": "LTIME",
+        "desc": "累计运行时间"
+      }
+    ],
+    "inouts": []
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "急停优先：急停时必须停止。",
+      "formula": "G(!PASTE_E_STOP_NC -> !VFD_RUN)"
+    },
+    {
+      "id": "P2",
+      "description": "失粘后立即停止。",
+      "formula": "G(!VISCOSITY_OK -> X(!VFD_RUN))"
+    },
+    {
+      "id": "P3",
+      "description": "累计运行时间单调不减。",
+      "formula": "G(PUMP_RUNTIME_ACC <= X(PUMP_RUNTIME_ACC))"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "去抖后启动并累计运行时间",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "VISCOSITY_OK": false,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "VFD_RUN": false,
+            "PUMP_RUNTIME_ACC": "T#0ms"
+          }
+        },
+        {
+          "inputs": {
+            "VISCOSITY_OK": true,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "VFD_RUN": false,
+            "PUMP_RUNTIME_ACC": "T#0ms"
+          }
+        },
+        {
+          "inputs": {
+            "VISCOSITY_OK": true,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "VFD_RUN": false,
+            "PUMP_RUNTIME_ACC": "T#0ms"
+          }
+        },
+        {
+          "inputs": {
+            "VISCOSITY_OK": true,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "VFD_RUN": false,
+            "PUMP_RUNTIME_ACC": "T#0ms"
+          }
+        },
+        {
+          "inputs": {
+            "VISCOSITY_OK": true,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "VFD_RUN": false,
+            "PUMP_RUNTIME_ACC": "T#0ms"
+          }
+        },
+        {
+          "inputs": {
+            "VISCOSITY_OK": true,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "VFD_RUN": true,
+            "PUMP_RUNTIME_ACC": "T#10ms"
+          }
+        },
+        {
+          "inputs": {
+            "VISCOSITY_OK": true,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "VFD_RUN": true,
+            "PUMP_RUNTIME_ACC": "T#20ms"
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "失粘立即停止且累计保持",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "VISCOSITY_OK": true,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "VFD_RUN": false,
+            "PUMP_RUNTIME_ACC": "T#0ms"
+          }
+        },
+        {
+          "inputs": {
+            "VISCOSITY_OK": true,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "VFD_RUN": false,
+            "PUMP_RUNTIME_ACC": "T#0ms"
+          }
+        },
+        {
+          "inputs": {
+            "VISCOSITY_OK": true,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "VFD_RUN": false,
+            "PUMP_RUNTIME_ACC": "T#0ms"
+          }
+        },
+        {
+          "inputs": {
+            "VISCOSITY_OK": true,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "VFD_RUN": false,
+            "PUMP_RUNTIME_ACC": "T#0ms"
+          }
+        },
+        {
+          "inputs": {
+            "VISCOSITY_OK": true,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "VFD_RUN": false,
+            "PUMP_RUNTIME_ACC": "T#0ms"
+          }
+        },
+        {
+          "inputs": {
+            "VISCOSITY_OK": true,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "VFD_RUN": true,
+            "PUMP_RUNTIME_ACC": "T#10ms"
+          }
+        },
+        {
+          "inputs": {
+            "VISCOSITY_OK": false,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#10ms"
+          },
+          "expect": {
+            "VFD_RUN": false,
+            "PUMP_RUNTIME_ACC": "T#10ms"
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC3",
+      "description": "维护到期指示",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "VISCOSITY_OK": true,
+            "PASTE_E_STOP_NC": true,
+            "DebounceTime": "T#50ms",
+            "CycleTime": "T#500h"
+          },
+          "expect": {
+            "VFD_RUN": true,
+            "PUMP_RUNTIME_ACC": "T#500h",
+            "PUMP_MAINT_DUE": true
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "JamPump",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK JamPump\nVAR_INPUT\n    VISCOSITY_OK : BOOL;\n    PASTE_E_STOP_NC : BOOL;\n    DebounceTime : TIME;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    VFD_RUN : BOOL;\n    PUMP_MAINT_DUE : BOOL;\n    PUMP_RUNTIME_ACC : LTIME;\nEND_VAR\nVAR\n    debounceElapsed : LTIME := LTIME#0ms;\n    viscValid : BOOL;\nEND_VAR\n",
+        "implementation": "IF NOT VISCOSITY_OK THEN\n    viscValid := FALSE;\n    debounceElapsed := LTIME#0ms;\nELSIF NOT PASTE_E_STOP_NC THEN\n    viscValid := FALSE;\n    debounceElapsed := LTIME#0ms;\nELSIF NOT viscValid THEN\n    debounceElapsed := debounceElapsed + TO_LTIME(CycleTime);\n    IF debounceElapsed >= TO_LTIME(DebounceTime) THEN\n        viscValid := TRUE;\n    END_IF\nEND_IF\nIF PASTE_E_STOP_NC AND viscValid THEN\n    VFD_RUN := TRUE;\nELSE\n    VFD_RUN := FALSE;\nEND_IF\nIF VFD_RUN THEN\n    PUMP_RUNTIME_ACC := PUMP_RUNTIME_ACC + TO_LTIME(CycleTime);\nEND_IF\nIF PUMP_RUNTIME_ACC >= TO_LTIME(T#500h) THEN\n    PUMP_MAINT_DUE := TRUE;\nEND_IF\n"
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+ "id": "motor_start_stop_bad",
+ "pous": [
+  {
+   "name": "MotorCtrl",
+   "kind": "function_block",
+   "declaration": "FUNCTION_BLOCK MotorCtrl\nVAR_INPUT\n    StartBtn : BOOL;\n    StopBtn : BOOL;\n    EStop : BOOL;\nEND_VAR\nVAR_OUTPUT\n    Motor : BOOL;\nEND_VAR\n",
+   "implementation": "IF StopBtn OR EStop THEN\n    Motor := FALSE;\nELSIF StartBtn THEN\n    Motor := TRUE;\nEND_IF\nundeclared_var := 42;\n"
+  }
+ ],
+ "include_message_attrs": true
+}

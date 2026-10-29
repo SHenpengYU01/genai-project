@@ -1,0 +1,11 @@
+{
+ "id": "program_counter_good",
+ "pous": [
+  {
+   "name": "PLC_PRG",
+   "kind": "program",
+   "declaration": "PROGRAM PLC_PRG\nVAR\n    counter : INT;\nEND_VAR\n",
+   "implementation": "counter := counter + 1;\nIF counter > 100 THEN\n    counter := 0;\nEND_IF\n"
+  }
+ ]
+}

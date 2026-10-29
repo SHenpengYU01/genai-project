@@ -1,0 +1,11 @@
+{
+ "id": "unicode_strings_good",
+ "pous": [
+  {
+   "name": "UniCase",
+   "kind": "function_block",
+   "declaration": "FUNCTION_BLOCK UniCase\nVAR\n    msg : STRING(80);\nEND_VAR\n",
+   "implementation": "(* 中文注释：验证 UTF-8 链路 *)\nmsg := '急停已触发';\n"
+  }
+ ]
+}
