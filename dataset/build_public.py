@@ -1924,6 +1924,623 @@ TASKS.append({
 })
 
 
+# ---------------------------------------------------------------------------
+# hard 1: Recipe Management System (struct array + CRUD)
+# ---------------------------------------------------------------------------
+TASKS.append({
+    "id": "public_hard_001",
+    "source": "public",
+    "difficulty": "hard",
+    "title": "配方管理系统",
+    "pou": {"type": "function_block", "name": "RecipeMgmt"},
+    "requirement": {
+        "en": (
+            "Manage up to 10 recipes (ARRAY[1..10] OF ST_Recipe, recipeID 0 = empty "
+            "slot). queryRecipe finds by recipeID (not found -> error 16#8001, else "
+            "output recipeQueryResult). addRecipe: duplicate -> 16#8002, no empty slot "
+            "-> 16#8003, else store in smallest empty slot. deleteRecipe: not found -> "
+            "16#8004, else set recipeID 0. modifyRecipe: not found -> 16#8005, else "
+            "replace."
+        ),
+        "zh": (
+            "管理最多 10 条配方(ARRAY[1..10] OF ST_Recipe，recipeID=0 表示空槽)。queryRecipe 按 "
+            "recipeID 查询(未找到 error 16#8001，否则输出 recipeQueryResult)。addRecipe：重复 16#8002、"
+            "无空槽 16#8003，否则存入最小空槽。deleteRecipe：未找到 16#8004，否则置 recipeID=0。"
+            "modifyRecipe：未找到 16#8005，否则替换。"
+        ),
+    },
+    "interface": {
+        "duts": [
+            {"name": "ST_Recipe", "kind": "struct", "fields": [
+                {"name": "recipeID", "type": "INT", "desc": "配方号，0 表示空槽"},
+                {"name": "ingredientType", "type": "INT", "desc": "原料类型"},
+                {"name": "ingredientRatio", "type": "REAL", "desc": "原料比例"},
+                {"name": "productionTemperature", "type": "REAL", "desc": "生产温度"},
+            ]},
+        ],
+        "inputs": [
+            {"name": "addRecipe", "type": "BOOL", "desc": "添加请求"},
+            {"name": "deleteRecipe", "type": "BOOL", "desc": "删除请求"},
+            {"name": "modifyRecipe", "type": "BOOL", "desc": "修改请求"},
+            {"name": "queryRecipe", "type": "BOOL", "desc": "查询请求"},
+            {"name": "recipeIn", "type": "ST_Recipe", "desc": "输入配方"},
+        ],
+        "outputs": [
+            {"name": "recipeAdded", "type": "BOOL", "desc": "添加成功"},
+            {"name": "recipeDeleted", "type": "BOOL", "desc": "删除成功"},
+            {"name": "recipeModified", "type": "BOOL", "desc": "修改成功"},
+            {"name": "recipeQueryResult", "type": "ST_Recipe", "desc": "查询结果"},
+            {"name": "error", "type": "BOOL", "desc": "错误"},
+            {"name": "status", "type": "WORD", "desc": "状态码"},
+        ],
+        "inouts": [
+            {"name": "recipe", "type": "ARRAY[1..10] OF ST_Recipe", "desc": "配方库"},
+        ],
+    },
+    "ltl_specs": [
+        {"id": "P1", "description": "无错误时状态码为 0。",
+         "formula": "G(!error -> status = 0)"},
+        {"id": "P2", "description": "错误时状态码属于合法错误码集合。",
+         "formula": "G(error -> (status = 16#8001 || status = 16#8002 || status = 16#8003 || status = 16#8004 || status = 16#8005))"},
+    ],
+    "test_cases": [
+        {"id": "TC1", "description": "添加与查询", "scan_ms": 10, "steps": [
+            {"inputs": {"addRecipe": False, "deleteRecipe": False, "modifyRecipe": False,
+                        "queryRecipe": False,
+                        "recipeIn": {"recipeID": 0, "ingredientType": 0,
+                                     "ingredientRatio": 0.0, "productionTemperature": 0.0}},
+             "expect": {"error": False}},
+            {"inputs": {"addRecipe": True, "deleteRecipe": False, "modifyRecipe": False,
+                        "queryRecipe": False,
+                        "recipeIn": {"recipeID": 1, "ingredientType": 5,
+                                     "ingredientRatio": 30.0, "productionTemperature": 120.0}},
+             "expect": {"recipeAdded": True, "error": False,
+                        "recipe": [{"recipeID": 1, "ingredientType": 5,
+                                    "ingredientRatio": 30.0, "productionTemperature": 120.0}]}},
+            {"inputs": {"addRecipe": False, "deleteRecipe": False, "modifyRecipe": False,
+                        "queryRecipe": True,
+                        "recipeIn": {"recipeID": 1, "ingredientType": 0,
+                                     "ingredientRatio": 0.0, "productionTemperature": 0.0}},
+             "expect": {"recipeQueryResult": {"recipeID": 1, "ingredientType": 5,
+                                              "ingredientRatio": 30.0, "productionTemperature": 120.0},
+                        "error": False}},
+        ]},
+        {"id": "TC2", "description": "重复添加报错", "scan_ms": 10, "steps": [
+            {"inputs": {"addRecipe": True, "deleteRecipe": False, "modifyRecipe": False,
+                        "queryRecipe": False,
+                        "recipeIn": {"recipeID": 1, "ingredientType": 5,
+                                     "ingredientRatio": 30.0, "productionTemperature": 120.0}},
+             "expect": {"recipeAdded": True, "error": False}},
+            {"inputs": {"addRecipe": True, "deleteRecipe": False, "modifyRecipe": False,
+                        "queryRecipe": False,
+                        "recipeIn": {"recipeID": 1, "ingredientType": 9,
+                                     "ingredientRatio": 50.0, "productionTemperature": 100.0}},
+             "expect": {"recipeAdded": False, "error": True, "status": 32770}},
+        ]},
+    ],
+    "reference": {
+        "auto_wire": False,
+        "duts": [
+            {"name": "ST_Recipe", "kind": "struct",
+             "declaration": "TYPE ST_Recipe :\nSTRUCT\n    recipeID : INT;\n    ingredientType : INT;\n    ingredientRatio : REAL;\n    productionTemperature : REAL;\nEND_STRUCT\nEND_TYPE\n"},
+        ],
+        "pous": [
+            {
+                "name": "RecipeMgmt",
+                "kind": "function_block",
+                "declaration": (
+                    "FUNCTION_BLOCK RecipeMgmt\n"
+                    "VAR_INPUT\n"
+                    "    addRecipe : BOOL;\n"
+                    "    deleteRecipe : BOOL;\n"
+                    "    modifyRecipe : BOOL;\n"
+                    "    queryRecipe : BOOL;\n"
+                    "    recipeIn : ST_Recipe;\n"
+                    "END_VAR\n"
+                    "VAR_OUTPUT\n"
+                    "    recipeAdded : BOOL;\n"
+                    "    recipeDeleted : BOOL;\n"
+                    "    recipeModified : BOOL;\n"
+                    "    recipeQueryResult : ST_Recipe;\n"
+                    "    error : BOOL;\n"
+                    "    status : WORD;\n"
+                    "END_VAR\n"
+                    "VAR_IN_OUT\n"
+                    "    recipe : ARRAY[1..10] OF ST_Recipe;\n"
+                    "END_VAR\n"
+                    "VAR\n"
+                    "    i : INT;\n"
+                    "    slot : INT;\n"
+                    "    found : BOOL;\n"
+                    "    addPrev : BOOL;\n"
+                    "    delPrev : BOOL;\n"
+                    "    modPrev : BOOL;\n"
+                    "    qryPrev : BOOL;\n"
+                    "END_VAR\n"),
+                "implementation": (
+                    "recipeAdded := FALSE;\n"
+                    "recipeDeleted := FALSE;\n"
+                    "recipeModified := FALSE;\n"
+                    "error := FALSE;\n"
+                    "status := 0;\n"
+                    "IF queryRecipe AND NOT qryPrev THEN\n"
+                    "    found := FALSE;\n"
+                    "    FOR i := 1 TO 10 DO\n"
+                    "        IF recipe[i].recipeID = recipeIn.recipeID THEN\n"
+                    "            recipeQueryResult := recipe[i];\n"
+                    "            found := TRUE;\n"
+                    "        END_IF\n"
+                    "    END_FOR\n"
+                    "    IF NOT found THEN\n"
+                    "        error := TRUE;\n"
+                    "        status := 16#8001;\n"
+                    "    END_IF\n"
+                    "END_IF\n"
+                    "IF addRecipe AND NOT addPrev THEN\n"
+                    "    found := FALSE;\n"
+                    "    FOR i := 1 TO 10 DO\n"
+                    "        IF recipe[i].recipeID = recipeIn.recipeID THEN\n"
+                    "            found := TRUE;\n"
+                    "        END_IF\n"
+                    "    END_FOR\n"
+                    "    IF found THEN\n"
+                    "        error := TRUE;\n"
+                    "        status := 16#8002;\n"
+                    "    ELSE\n"
+                    "        slot := 0;\n"
+                    "        FOR i := 1 TO 10 DO\n"
+                    "            IF recipe[i].recipeID = 0 AND slot = 0 THEN\n"
+                    "                slot := i;\n"
+                    "            END_IF\n"
+                    "        END_FOR\n"
+                    "        IF slot = 0 THEN\n"
+                    "            error := TRUE;\n"
+                    "            status := 16#8003;\n"
+                    "        ELSE\n"
+                    "            recipe[slot] := recipeIn;\n"
+                    "            recipeAdded := TRUE;\n"
+                    "        END_IF\n"
+                    "    END_IF\n"
+                    "END_IF\n"
+                    "IF deleteRecipe AND NOT delPrev THEN\n"
+                    "    found := FALSE;\n"
+                    "    FOR i := 1 TO 10 DO\n"
+                    "        IF recipe[i].recipeID = recipeIn.recipeID THEN\n"
+                    "            recipe[i].recipeID := 0;\n"
+                    "            found := TRUE;\n"
+                    "            recipeDeleted := TRUE;\n"
+                    "        END_IF\n"
+                    "    END_FOR\n"
+                    "    IF NOT found THEN\n"
+                    "        error := TRUE;\n"
+                    "        status := 16#8004;\n"
+                    "    END_IF\n"
+                    "END_IF\n"
+                    "IF modifyRecipe AND NOT modPrev THEN\n"
+                    "    found := FALSE;\n"
+                    "    FOR i := 1 TO 10 DO\n"
+                    "        IF recipe[i].recipeID = recipeIn.recipeID THEN\n"
+                    "            recipe[i] := recipeIn;\n"
+                    "            found := TRUE;\n"
+                    "            recipeModified := TRUE;\n"
+                    "        END_IF\n"
+                    "    END_FOR\n"
+                    "    IF NOT found THEN\n"
+                    "        error := TRUE;\n"
+                    "        status := 16#8005;\n"
+                    "    END_IF\n"
+                    "END_IF\n"
+                    "addPrev := addRecipe;\n"
+                    "delPrev := deleteRecipe;\n"
+                    "modPrev := modifyRecipe;\n"
+                    "qryPrev := queryRecipe;\n"),
+            },
+            {
+                "name": "PLC_PRG",
+                "kind": "program",
+                "declaration": (
+                    "PROGRAM PLC_PRG\n"
+                    "VAR\n"
+                    "    fb : RecipeMgmt;\n"
+                    "    db : ARRAY[1..10] OF ST_Recipe;\n"
+                    "END_VAR\n"),
+                "implementation": (
+                    "fb(addRecipe := FALSE, deleteRecipe := FALSE, modifyRecipe := FALSE,\n"
+                    "   queryRecipe := FALSE, recipeIn := db[1], recipe := db);\n"),
+            },
+        ],
+    },
+})
+
+# ---------------------------------------------------------------------------
+# hard 2: Material Proportioning Process Control
+# ---------------------------------------------------------------------------
+TASKS.append({
+    "id": "public_hard_002",
+    "source": "public",
+    "difficulty": "hard",
+    "title": "物料配比过程控制",
+    "pou": {"type": "function_block", "name": "MaterialMix"},
+    "requirement": {
+        "en": (
+            "Mix three materials and deliver through valve D. estop FALSE stops "
+            "everything. Manual (opeMode FALSE): each valve/motor start button toggles "
+            "its run on rising edge. Automatic (opeMode TRUE): autoStart opens valve A; "
+            "level>=50 closes A opens B; level>=80 closes B; if processMode FALSE start "
+            "mixing, on mixComplete stop and open D; if TRUE open C, level>=100 closes C "
+            "then start mixing, on mixComplete stop and open D."
+        ),
+        "zh": (
+            "混合三种物料并经阀 D 输送。estop 为 FALSE 时急停所有设备。手动(opeMode=FALSE)：各阀/电机"
+            "启动按钮的上升沿切换对应运行状态。自动(opeMode=TRUE)：autoStart 后先开阀 A；液位≥50 关 A "
+            "开 B；液位≥80 关 B；processMode=FALSE 则启动搅拌，mixComplete 后停搅拌开 D；processMode=TRUE "
+            "则开 C，液位≥100 关 C 再启动搅拌，mixComplete 后停搅拌开 D。"
+        ),
+    },
+    "interface": {
+        "duts": [],
+        "inputs": [
+            {"name": "estop", "type": "BOOL", "desc": "FALSE 急停"},
+            {"name": "opeMode", "type": "BOOL", "desc": "FALSE 手动 TRUE 自动"},
+            {"name": "valveAStart", "type": "BOOL", "desc": "阀 A 启动按钮"},
+            {"name": "valveBStart", "type": "BOOL", "desc": "阀 B 启动按钮"},
+            {"name": "valveCStart", "type": "BOOL", "desc": "阀 C 启动按钮"},
+            {"name": "valveDStart", "type": "BOOL", "desc": "阀 D 启动按钮"},
+            {"name": "mixMotorStart", "type": "BOOL", "desc": "搅拌电机启动按钮"},
+            {"name": "autoStart", "type": "BOOL", "desc": "自动启动按钮"},
+            {"name": "processMode", "type": "BOOL", "desc": "工艺模式"},
+            {"name": "levelSensor", "type": "INT", "desc": "液位(cm)"},
+            {"name": "mixMotorComplete", "type": "BOOL", "desc": "搅拌完成信号"},
+        ],
+        "outputs": [
+            {"name": "valveARun", "type": "BOOL", "desc": "阀 A 运行"},
+            {"name": "valveBRun", "type": "BOOL", "desc": "阀 B 运行"},
+            {"name": "valveCRun", "type": "BOOL", "desc": "阀 C 运行"},
+            {"name": "valveDRun", "type": "BOOL", "desc": "阀 D 运行"},
+            {"name": "mixMotorRun", "type": "BOOL", "desc": "搅拌电机运行"},
+        ],
+        "inouts": [],
+    },
+    "ltl_specs": [
+        {"id": "P1", "description": "急停时所有设备停止。",
+         "formula": "G(!estop -> (!valveARun && !valveBRun && !valveCRun && !valveDRun && !mixMotorRun))"},
+        {"id": "P2", "description": "手动按钮上升沿切换阀门。",
+         "formula": "G((!opeMode && estop && valveAStart && !X(valveAStart)) -> (valveARun <-> !X(valveARun)))"},
+    ],
+    "test_cases": [
+        {"id": "TC1", "description": "手动切换", "scan_ms": 10, "steps": [
+            {"inputs": {"estop": True, "opeMode": False, "valveAStart": False,
+                        "valveBStart": False, "valveCStart": False, "valveDStart": False,
+                        "mixMotorStart": False, "autoStart": False, "processMode": False,
+                        "levelSensor": 0, "mixMotorComplete": False},
+             "expect": {"valveARun": False}},
+            {"inputs": {"estop": True, "opeMode": False, "valveAStart": True,
+                        "valveBStart": False, "valveCStart": False, "valveDStart": False,
+                        "mixMotorStart": False, "autoStart": False, "processMode": False,
+                        "levelSensor": 0, "mixMotorComplete": False},
+             "expect": {"valveARun": True}},
+            {"inputs": {"estop": True, "opeMode": False, "valveAStart": False,
+                        "valveBStart": False, "valveCStart": False, "valveDStart": False,
+                        "mixMotorStart": False, "autoStart": False, "processMode": False,
+                        "levelSensor": 0, "mixMotorComplete": False},
+             "expect": {"valveARun": True}},
+            {"inputs": {"estop": True, "opeMode": False, "valveAStart": True,
+                        "valveBStart": False, "valveCStart": False, "valveDStart": False,
+                        "mixMotorStart": False, "autoStart": False, "processMode": False,
+                        "levelSensor": 0, "mixMotorComplete": False},
+             "expect": {"valveARun": False}},
+        ]},
+        {"id": "TC2", "description": "急停关断所有设备", "scan_ms": 10, "steps": [
+            {"inputs": {"estop": True, "opeMode": False, "valveAStart": True,
+                        "valveBStart": False, "valveCStart": False, "valveDStart": False,
+                        "mixMotorStart": False, "autoStart": False, "processMode": False,
+                        "levelSensor": 0, "mixMotorComplete": False},
+             "expect": {"valveARun": True}},
+            {"inputs": {"estop": False, "opeMode": False, "valveAStart": False,
+                        "valveBStart": False, "valveCStart": False, "valveDStart": False,
+                        "mixMotorStart": False, "autoStart": False, "processMode": False,
+                        "levelSensor": 0, "mixMotorComplete": False},
+             "expect": {"valveARun": False, "valveBRun": False, "valveCRun": False,
+                        "valveDRun": False, "mixMotorRun": False}},
+        ]},
+    ],
+    "reference": {
+        "duts": [],
+        "pous": [{
+            "name": "MaterialMix",
+            "kind": "function_block",
+            "declaration": (
+                "FUNCTION_BLOCK MaterialMix\n"
+                "VAR_INPUT\n"
+                "    estop : BOOL;\n"
+                "    opeMode : BOOL;\n"
+                "    valveAStart : BOOL;\n"
+                "    valveBStart : BOOL;\n"
+                "    valveCStart : BOOL;\n"
+                "    valveDStart : BOOL;\n"
+                "    mixMotorStart : BOOL;\n"
+                "    autoStart : BOOL;\n"
+                "    processMode : BOOL;\n"
+                "    levelSensor : INT;\n"
+                "    mixMotorComplete : BOOL;\n"
+                "END_VAR\n"
+                "VAR_OUTPUT\n"
+                "    valveARun : BOOL;\n"
+                "    valveBRun : BOOL;\n"
+                "    valveCRun : BOOL;\n"
+                "    valveDRun : BOOL;\n"
+                "    mixMotorRun : BOOL;\n"
+                "END_VAR\n"
+                "VAR\n"
+                "    va : BOOL;\n"
+                "    vb : BOOL;\n"
+                "    vc : BOOL;\n"
+                "    vd : BOOL;\n"
+                "    mm : BOOL;\n"
+                "    aPrev : BOOL;\n"
+                "    bPrev : BOOL;\n"
+                "    cPrev : BOOL;\n"
+                "    dPrev : BOOL;\n"
+                "    mPrev : BOOL;\n"
+                "    autoStage : INT := 0;\n"
+                "    autoStartPrev : BOOL;\n"
+                "END_VAR\n"),
+            "implementation": (
+                "IF NOT estop THEN\n"
+                "    va := FALSE;\n"
+                "    vb := FALSE;\n"
+                "    vc := FALSE;\n"
+                "    vd := FALSE;\n"
+                "    mm := FALSE;\n"
+                "    autoStage := 0;\n"
+                "ELSIF NOT opeMode THEN\n"
+                "    IF valveAStart AND NOT aPrev THEN\n"
+                "        va := NOT va;\n"
+                "    END_IF\n"
+                "    IF valveBStart AND NOT bPrev THEN\n"
+                "        vb := NOT vb;\n"
+                "    END_IF\n"
+                "    IF valveCStart AND NOT cPrev THEN\n"
+                "        vc := NOT vc;\n"
+                "    END_IF\n"
+                "    IF valveDStart AND NOT dPrev THEN\n"
+                "        vd := NOT vd;\n"
+                "    END_IF\n"
+                "    IF mixMotorStart AND NOT mPrev THEN\n"
+                "        mm := NOT mm;\n"
+                "    END_IF\n"
+                "    autoStage := 0;\n"
+                "ELSE\n"
+                "    va := FALSE;\n"
+                "    vb := FALSE;\n"
+                "    vc := FALSE;\n"
+                "    vd := FALSE;\n"
+                "    mm := FALSE;\n"
+                "    CASE autoStage OF\n"
+                "    0:\n"
+                "        IF autoStart AND NOT autoStartPrev THEN\n"
+                "            autoStage := 1;\n"
+                "        END_IF\n"
+                "    1:\n"
+                "        va := TRUE;\n"
+                "        IF levelSensor >= 50 THEN\n"
+                "            autoStage := 2;\n"
+                "        END_IF\n"
+                "    2:\n"
+                "        vb := TRUE;\n"
+                "        IF levelSensor >= 80 THEN\n"
+                "            IF processMode THEN\n"
+                "                autoStage := 4;\n"
+                "            ELSE\n"
+                "                autoStage := 3;\n"
+                "            END_IF\n"
+                "        END_IF\n"
+                "    3:\n"
+                "        mm := TRUE;\n"
+                "        IF mixMotorComplete THEN\n"
+                "            autoStage := 5;\n"
+                "        END_IF\n"
+                "    4:\n"
+                "        vc := TRUE;\n"
+                "        IF levelSensor >= 100 THEN\n"
+                "            autoStage := 3;\n"
+                "        END_IF\n"
+                "    5:\n"
+                "        vd := TRUE;\n"
+                "    END_CASE\n"
+                "END_IF\n"
+                "valveARun := va;\n"
+                "valveBRun := vb;\n"
+                "valveCRun := vc;\n"
+                "valveDRun := vd;\n"
+                "mixMotorRun := mm;\n"
+                "aPrev := valveAStart;\n"
+                "bPrev := valveBStart;\n"
+                "cPrev := valveCStart;\n"
+                "dPrev := valveDStart;\n"
+                "mPrev := mixMotorStart;\n"
+                "autoStartPrev := autoStart;\n"),
+        }],
+    },
+})
+
+# ---------------------------------------------------------------------------
+# hard 3: Production Control (5 stations + weighing + temperature calc)
+# ---------------------------------------------------------------------------
+TASKS.append({
+    "id": "public_hard_003",
+    "source": "public",
+    "difficulty": "hard",
+    "title": "五工位生产控制",
+    "pou": {"type": "function_block", "name": "ProductionControl"},
+    "requirement": {
+        "en": (
+            "A line moves product through feed, wash, weigh, fire, output stations. "
+            "Manual: forward/reverse interlocked. Automatic: SensorFeed starts forward "
+            "to wash; SensorWash stops, washComplete forwards to weigh; SensorWeight "
+            "stops, weightComplete judges 100..200 (else kick), qualified computes "
+            "firingTemp 500..550 linear from weight 100..200 and forwards to fire; "
+            "SensorFiring stops, firingComplete forwards to output; SensorOutput stops "
+            "and lights CompletionLight until SensorOutput clears."
+        ),
+        "zh": (
+            "生产线依次经过上料、清洗、称重、焙烧、成品五个工位。手动：正反转互锁。自动：SensorFeed "
+            "触发正转送向清洗；SensorWash 停止，washComplete 后正转送向称重；SensorWeight 停止，"
+            "weightComplete 后判定 100..200 合格(否则 kick 剔除)，合格则按重量 100..200 线性对应 "
+            "500..550 计算 firingTemp 并正转送向焙烧；SensorFiring 停止，firingComplete 后正转送向"
+            "成品；SensorOutput 停止并点亮 CompletionLight，直到 SensorOutput 消失熄灭。"
+        ),
+    },
+    "interface": {
+        "duts": [],
+        "inputs": [
+            {"name": "Mode", "type": "BOOL", "desc": "0 手动 1 自动"},
+            {"name": "ForwardButton", "type": "BOOL", "desc": "正转按钮"},
+            {"name": "ReverseButton", "type": "BOOL", "desc": "反转按钮"},
+            {"name": "SensorFeed", "type": "BOOL", "desc": "上料检测"},
+            {"name": "SensorWash", "type": "BOOL", "desc": "清洗检测"},
+            {"name": "SensorWeight", "type": "BOOL", "desc": "称重检测"},
+            {"name": "SensorFiring", "type": "BOOL", "desc": "焙烧检测"},
+            {"name": "SensorOutput", "type": "BOOL", "desc": "成品检测"},
+            {"name": "washComplete", "type": "BOOL", "desc": "清洗完成"},
+            {"name": "weightComplete", "type": "BOOL", "desc": "称重完成"},
+            {"name": "weight", "type": "REAL", "desc": "重量值"},
+            {"name": "firingComplete", "type": "BOOL", "desc": "焙烧完成"},
+        ],
+        "outputs": [
+            {"name": "MotorForward", "type": "BOOL", "desc": "正转"},
+            {"name": "MotorReverse", "type": "BOOL", "desc": "反转"},
+            {"name": "kick", "type": "BOOL", "desc": "剔除"},
+            {"name": "CompletionLight", "type": "BOOL", "desc": "完成灯"},
+            {"name": "firingTemp", "type": "REAL", "desc": "焙烧温度"},
+        ],
+        "inouts": [],
+    },
+    "ltl_specs": [
+        {"id": "P1", "description": "正反转互锁。",
+         "formula": "G(!(MotorForward && MotorReverse))"},
+        {"id": "P2", "description": "完成灯只在成品位点亮。",
+         "formula": "G(CompletionLight -> SensorOutput)"},
+        {"id": "P3", "description": "焙烧温度在 500..550 内。",
+         "formula": "G(firingTemp >= 500.0 && firingTemp <= 550.0)"},
+    ],
+    "test_cases": [
+        {"id": "TC1", "description": "合格品焙烧温度计算", "scan_ms": 10, "steps": [
+            {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
+                        "SensorFeed": False, "SensorWash": False, "SensorWeight": True,
+                        "SensorFiring": False, "SensorOutput": False,
+                        "washComplete": False, "weightComplete": True, "weight": 150.0,
+                        "firingComplete": False},
+             "expect": {"firingTemp": 525.0, "kick": False}},
+        ]},
+        {"id": "TC2", "description": "不合格品剔除", "scan_ms": 10, "steps": [
+            {"inputs": {"Mode": True, "ForwardButton": False, "ReverseButton": False,
+                        "SensorFeed": False, "SensorWash": False, "SensorWeight": True,
+                        "SensorFiring": False, "SensorOutput": False,
+                        "washComplete": False, "weightComplete": True, "weight": 250.0,
+                        "firingComplete": False},
+             "expect": {"kick": True}},
+        ]},
+    ],
+    "reference": {
+        "duts": [],
+        "pous": [{
+            "name": "ProductionControl",
+            "kind": "function_block",
+            "declaration": (
+                "FUNCTION_BLOCK ProductionControl\n"
+                "VAR_INPUT\n"
+                "    Mode : BOOL;\n"
+                "    ForwardButton : BOOL;\n"
+                "    ReverseButton : BOOL;\n"
+                "    SensorFeed : BOOL;\n"
+                "    SensorWash : BOOL;\n"
+                "    SensorWeight : BOOL;\n"
+                "    SensorFiring : BOOL;\n"
+                "    SensorOutput : BOOL;\n"
+                "    washComplete : BOOL;\n"
+                "    weightComplete : BOOL;\n"
+                "    weight : REAL;\n"
+                "    firingComplete : BOOL;\n"
+                "END_VAR\n"
+                "VAR_OUTPUT\n"
+                "    MotorForward : BOOL;\n"
+                "    MotorReverse : BOOL;\n"
+                "    kick : BOOL;\n"
+                "    CompletionLight : BOOL;\n"
+                "    firingTemp : REAL;\n"
+                "END_VAR\n"
+                "VAR\n"
+                "    stage : INT := 0;\n"
+                "END_VAR\n"),
+            "implementation": (
+                "MotorForward := FALSE;\n"
+                "MotorReverse := FALSE;\n"
+                "kick := FALSE;\n"
+                "CompletionLight := FALSE;\n"
+                "IF NOT Mode THEN\n"
+                "    IF ReverseButton AND NOT ForwardButton THEN\n"
+                "        MotorReverse := TRUE;\n"
+                "    ELSIF ForwardButton AND NOT ReverseButton THEN\n"
+                "        MotorForward := TRUE;\n"
+                "    END_IF\n"
+                "    stage := 0;\n"
+                "ELSE\n"
+                "    CASE stage OF\n"
+                "    0:\n"
+                "        IF SensorFeed THEN\n"
+                "            stage := 1;\n"
+                "        END_IF\n"
+                "    1:\n"
+                "        MotorForward := TRUE;\n"
+                "        IF SensorWash THEN\n"
+                "            stage := 2;\n"
+                "        END_IF\n"
+                "    2:\n"
+                "        IF washComplete THEN\n"
+                "            stage := 3;\n"
+                "        END_IF\n"
+                "    3:\n"
+                "        MotorForward := TRUE;\n"
+                "        IF SensorWeight THEN\n"
+                "            stage := 4;\n"
+                "        END_IF\n"
+                "    4:\n"
+                "        IF weightComplete THEN\n"
+                "            IF weight >= 100.0 AND weight <= 200.0 THEN\n"
+                "                firingTemp := 500.0 + (weight - 100.0) * 0.5;\n"
+                "                stage := 5;\n"
+                "            ELSE\n"
+                "                kick := TRUE;\n"
+                "                stage := 0;\n"
+                "            END_IF\n"
+                "        END_IF\n"
+                "    5:\n"
+                "        MotorForward := TRUE;\n"
+                "        IF SensorFiring THEN\n"
+                "            stage := 6;\n"
+                "        END_IF\n"
+                "    6:\n"
+                "        IF firingComplete THEN\n"
+                "            stage := 7;\n"
+                "        END_IF\n"
+                "    7:\n"
+                "        MotorForward := TRUE;\n"
+                "        IF SensorOutput THEN\n"
+                "            stage := 8;\n"
+                "        END_IF\n"
+                "    8:\n"
+                "        CompletionLight := TRUE;\n"
+                "        IF NOT SensorOutput THEN\n"
+                "            stage := 0;\n"
+                "        END_IF\n"
+                "    END_CASE\n"
+                "END_IF\n"),
+        }],
+    },
+})
+
+
 def dump():
     os.makedirs(OUT, exist_ok=True)
     for t in TASKS:

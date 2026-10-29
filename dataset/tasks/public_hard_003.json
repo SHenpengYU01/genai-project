@@ -1,0 +1,190 @@
+{
+  "id": "public_hard_003",
+  "source": "public",
+  "difficulty": "hard",
+  "title": "五工位生产控制",
+  "pou": {
+    "type": "function_block",
+    "name": "ProductionControl"
+  },
+  "requirement": {
+    "en": "A line moves product through feed, wash, weigh, fire, output stations. Manual: forward/reverse interlocked. Automatic: SensorFeed starts forward to wash; SensorWash stops, washComplete forwards to weigh; SensorWeight stops, weightComplete judges 100..200 (else kick), qualified computes firingTemp 500..550 linear from weight 100..200 and forwards to fire; SensorFiring stops, firingComplete forwards to output; SensorOutput stops and lights CompletionLight until SensorOutput clears.",
+    "zh": "生产线依次经过上料、清洗、称重、焙烧、成品五个工位。手动：正反转互锁。自动：SensorFeed 触发正转送向清洗；SensorWash 停止，washComplete 后正转送向称重；SensorWeight 停止，weightComplete 后判定 100..200 合格(否则 kick 剔除)，合格则按重量 100..200 线性对应 500..550 计算 firingTemp 并正转送向焙烧；SensorFiring 停止，firingComplete 后正转送向成品；SensorOutput 停止并点亮 CompletionLight，直到 SensorOutput 消失熄灭。"
+  },
+  "interface": {
+    "duts": [],
+    "inputs": [
+      {
+        "name": "Mode",
+        "type": "BOOL",
+        "desc": "0 手动 1 自动"
+      },
+      {
+        "name": "ForwardButton",
+        "type": "BOOL",
+        "desc": "正转按钮"
+      },
+      {
+        "name": "ReverseButton",
+        "type": "BOOL",
+        "desc": "反转按钮"
+      },
+      {
+        "name": "SensorFeed",
+        "type": "BOOL",
+        "desc": "上料检测"
+      },
+      {
+        "name": "SensorWash",
+        "type": "BOOL",
+        "desc": "清洗检测"
+      },
+      {
+        "name": "SensorWeight",
+        "type": "BOOL",
+        "desc": "称重检测"
+      },
+      {
+        "name": "SensorFiring",
+        "type": "BOOL",
+        "desc": "焙烧检测"
+      },
+      {
+        "name": "SensorOutput",
+        "type": "BOOL",
+        "desc": "成品检测"
+      },
+      {
+        "name": "washComplete",
+        "type": "BOOL",
+        "desc": "清洗完成"
+      },
+      {
+        "name": "weightComplete",
+        "type": "BOOL",
+        "desc": "称重完成"
+      },
+      {
+        "name": "weight",
+        "type": "REAL",
+        "desc": "重量值"
+      },
+      {
+        "name": "firingComplete",
+        "type": "BOOL",
+        "desc": "焙烧完成"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "MotorForward",
+        "type": "BOOL",
+        "desc": "正转"
+      },
+      {
+        "name": "MotorReverse",
+        "type": "BOOL",
+        "desc": "反转"
+      },
+      {
+        "name": "kick",
+        "type": "BOOL",
+        "desc": "剔除"
+      },
+      {
+        "name": "CompletionLight",
+        "type": "BOOL",
+        "desc": "完成灯"
+      },
+      {
+        "name": "firingTemp",
+        "type": "REAL",
+        "desc": "焙烧温度"
+      }
+    ],
+    "inouts": []
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "正反转互锁。",
+      "formula": "G(!(MotorForward && MotorReverse))"
+    },
+    {
+      "id": "P2",
+      "description": "完成灯只在成品位点亮。",
+      "formula": "G(CompletionLight -> SensorOutput)"
+    },
+    {
+      "id": "P3",
+      "description": "焙烧温度在 500..550 内。",
+      "formula": "G(firingTemp >= 500.0 && firingTemp <= 550.0)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "合格品焙烧温度计算",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorFeed": false,
+            "SensorWash": false,
+            "SensorWeight": true,
+            "SensorFiring": false,
+            "SensorOutput": false,
+            "washComplete": false,
+            "weightComplete": true,
+            "weight": 150.0,
+            "firingComplete": false
+          },
+          "expect": {
+            "firingTemp": 525.0,
+            "kick": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "不合格品剔除",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "Mode": true,
+            "ForwardButton": false,
+            "ReverseButton": false,
+            "SensorFeed": false,
+            "SensorWash": false,
+            "SensorWeight": true,
+            "SensorFiring": false,
+            "SensorOutput": false,
+            "washComplete": false,
+            "weightComplete": true,
+            "weight": 250.0,
+            "firingComplete": false
+          },
+          "expect": {
+            "kick": true
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "ProductionControl",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK ProductionControl\nVAR_INPUT\n    Mode : BOOL;\n    ForwardButton : BOOL;\n    ReverseButton : BOOL;\n    SensorFeed : BOOL;\n    SensorWash : BOOL;\n    SensorWeight : BOOL;\n    SensorFiring : BOOL;\n    SensorOutput : BOOL;\n    washComplete : BOOL;\n    weightComplete : BOOL;\n    weight : REAL;\n    firingComplete : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorForward : BOOL;\n    MotorReverse : BOOL;\n    kick : BOOL;\n    CompletionLight : BOOL;\n    firingTemp : REAL;\nEND_VAR\nVAR\n    stage : INT := 0;\nEND_VAR\n",
+        "implementation": "MotorForward := FALSE;\nMotorReverse := FALSE;\nkick := FALSE;\nCompletionLight := FALSE;\nIF NOT Mode THEN\n    IF ReverseButton AND NOT ForwardButton THEN\n        MotorReverse := TRUE;\n    ELSIF ForwardButton AND NOT ReverseButton THEN\n        MotorForward := TRUE;\n    END_IF\n    stage := 0;\nELSE\n    CASE stage OF\n    0:\n        IF SensorFeed THEN\n            stage := 1;\n        END_IF\n    1:\n        MotorForward := TRUE;\n        IF SensorWash THEN\n            stage := 2;\n        END_IF\n    2:\n        IF washComplete THEN\n            stage := 3;\n        END_IF\n    3:\n        MotorForward := TRUE;\n        IF SensorWeight THEN\n            stage := 4;\n        END_IF\n    4:\n        IF weightComplete THEN\n            IF weight >= 100.0 AND weight <= 200.0 THEN\n                firingTemp := 500.0 + (weight - 100.0) * 0.5;\n                stage := 5;\n            ELSE\n                kick := TRUE;\n                stage := 0;\n            END_IF\n        END_IF\n    5:\n        MotorForward := TRUE;\n        IF SensorFiring THEN\n            stage := 6;\n        END_IF\n    6:\n        IF firingComplete THEN\n            stage := 7;\n        END_IF\n    7:\n        MotorForward := TRUE;\n        IF SensorOutput THEN\n            stage := 8;\n        END_IF\n    8:\n        CompletionLight := TRUE;\n        IF NOT SensorOutput THEN\n            stage := 0;\n        END_IF\n    END_CASE\nEND_IF\n"
+      }
+    ]
+  }
+}

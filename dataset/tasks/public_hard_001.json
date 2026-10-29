@@ -1,0 +1,265 @@
+{
+  "id": "public_hard_001",
+  "source": "public",
+  "difficulty": "hard",
+  "title": "配方管理系统",
+  "pou": {
+    "type": "function_block",
+    "name": "RecipeMgmt"
+  },
+  "requirement": {
+    "en": "Manage up to 10 recipes (ARRAY[1..10] OF ST_Recipe, recipeID 0 = empty slot). queryRecipe finds by recipeID (not found -> error 16#8001, else output recipeQueryResult). addRecipe: duplicate -> 16#8002, no empty slot -> 16#8003, else store in smallest empty slot. deleteRecipe: not found -> 16#8004, else set recipeID 0. modifyRecipe: not found -> 16#8005, else replace.",
+    "zh": "管理最多 10 条配方(ARRAY[1..10] OF ST_Recipe，recipeID=0 表示空槽)。queryRecipe 按 recipeID 查询(未找到 error 16#8001，否则输出 recipeQueryResult)。addRecipe：重复 16#8002、无空槽 16#8003，否则存入最小空槽。deleteRecipe：未找到 16#8004，否则置 recipeID=0。modifyRecipe：未找到 16#8005，否则替换。"
+  },
+  "interface": {
+    "duts": [
+      {
+        "name": "ST_Recipe",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "recipeID",
+            "type": "INT",
+            "desc": "配方号，0 表示空槽"
+          },
+          {
+            "name": "ingredientType",
+            "type": "INT",
+            "desc": "原料类型"
+          },
+          {
+            "name": "ingredientRatio",
+            "type": "REAL",
+            "desc": "原料比例"
+          },
+          {
+            "name": "productionTemperature",
+            "type": "REAL",
+            "desc": "生产温度"
+          }
+        ]
+      }
+    ],
+    "inputs": [
+      {
+        "name": "addRecipe",
+        "type": "BOOL",
+        "desc": "添加请求"
+      },
+      {
+        "name": "deleteRecipe",
+        "type": "BOOL",
+        "desc": "删除请求"
+      },
+      {
+        "name": "modifyRecipe",
+        "type": "BOOL",
+        "desc": "修改请求"
+      },
+      {
+        "name": "queryRecipe",
+        "type": "BOOL",
+        "desc": "查询请求"
+      },
+      {
+        "name": "recipeIn",
+        "type": "ST_Recipe",
+        "desc": "输入配方"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "recipeAdded",
+        "type": "BOOL",
+        "desc": "添加成功"
+      },
+      {
+        "name": "recipeDeleted",
+        "type": "BOOL",
+        "desc": "删除成功"
+      },
+      {
+        "name": "recipeModified",
+        "type": "BOOL",
+        "desc": "修改成功"
+      },
+      {
+        "name": "recipeQueryResult",
+        "type": "ST_Recipe",
+        "desc": "查询结果"
+      },
+      {
+        "name": "error",
+        "type": "BOOL",
+        "desc": "错误"
+      },
+      {
+        "name": "status",
+        "type": "WORD",
+        "desc": "状态码"
+      }
+    ],
+    "inouts": [
+      {
+        "name": "recipe",
+        "type": "ARRAY[1..10] OF ST_Recipe",
+        "desc": "配方库"
+      }
+    ]
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "无错误时状态码为 0。",
+      "formula": "G(!error -> status = 0)"
+    },
+    {
+      "id": "P2",
+      "description": "错误时状态码属于合法错误码集合。",
+      "formula": "G(error -> (status = 16#8001 || status = 16#8002 || status = 16#8003 || status = 16#8004 || status = 16#8005))"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "添加与查询",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "addRecipe": false,
+            "deleteRecipe": false,
+            "modifyRecipe": false,
+            "queryRecipe": false,
+            "recipeIn": {
+              "recipeID": 0,
+              "ingredientType": 0,
+              "ingredientRatio": 0.0,
+              "productionTemperature": 0.0
+            }
+          },
+          "expect": {
+            "error": false
+          }
+        },
+        {
+          "inputs": {
+            "addRecipe": true,
+            "deleteRecipe": false,
+            "modifyRecipe": false,
+            "queryRecipe": false,
+            "recipeIn": {
+              "recipeID": 1,
+              "ingredientType": 5,
+              "ingredientRatio": 30.0,
+              "productionTemperature": 120.0
+            }
+          },
+          "expect": {
+            "recipeAdded": true,
+            "error": false,
+            "recipe": [
+              {
+                "recipeID": 1,
+                "ingredientType": 5,
+                "ingredientRatio": 30.0,
+                "productionTemperature": 120.0
+              }
+            ]
+          }
+        },
+        {
+          "inputs": {
+            "addRecipe": false,
+            "deleteRecipe": false,
+            "modifyRecipe": false,
+            "queryRecipe": true,
+            "recipeIn": {
+              "recipeID": 1,
+              "ingredientType": 0,
+              "ingredientRatio": 0.0,
+              "productionTemperature": 0.0
+            }
+          },
+          "expect": {
+            "recipeQueryResult": {
+              "recipeID": 1,
+              "ingredientType": 5,
+              "ingredientRatio": 30.0,
+              "productionTemperature": 120.0
+            },
+            "error": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "重复添加报错",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "addRecipe": true,
+            "deleteRecipe": false,
+            "modifyRecipe": false,
+            "queryRecipe": false,
+            "recipeIn": {
+              "recipeID": 1,
+              "ingredientType": 5,
+              "ingredientRatio": 30.0,
+              "productionTemperature": 120.0
+            }
+          },
+          "expect": {
+            "recipeAdded": true,
+            "error": false
+          }
+        },
+        {
+          "inputs": {
+            "addRecipe": true,
+            "deleteRecipe": false,
+            "modifyRecipe": false,
+            "queryRecipe": false,
+            "recipeIn": {
+              "recipeID": 1,
+              "ingredientType": 9,
+              "ingredientRatio": 50.0,
+              "productionTemperature": 100.0
+            }
+          },
+          "expect": {
+            "recipeAdded": false,
+            "error": true,
+            "status": 32770
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "auto_wire": false,
+    "duts": [
+      {
+        "name": "ST_Recipe",
+        "kind": "struct",
+        "declaration": "TYPE ST_Recipe :\nSTRUCT\n    recipeID : INT;\n    ingredientType : INT;\n    ingredientRatio : REAL;\n    productionTemperature : REAL;\nEND_STRUCT\nEND_TYPE\n"
+      }
+    ],
+    "pous": [
+      {
+        "name": "RecipeMgmt",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK RecipeMgmt\nVAR_INPUT\n    addRecipe : BOOL;\n    deleteRecipe : BOOL;\n    modifyRecipe : BOOL;\n    queryRecipe : BOOL;\n    recipeIn : ST_Recipe;\nEND_VAR\nVAR_OUTPUT\n    recipeAdded : BOOL;\n    recipeDeleted : BOOL;\n    recipeModified : BOOL;\n    recipeQueryResult : ST_Recipe;\n    error : BOOL;\n    status : WORD;\nEND_VAR\nVAR_IN_OUT\n    recipe : ARRAY[1..10] OF ST_Recipe;\nEND_VAR\nVAR\n    i : INT;\n    slot : INT;\n    found : BOOL;\n    addPrev : BOOL;\n    delPrev : BOOL;\n    modPrev : BOOL;\n    qryPrev : BOOL;\nEND_VAR\n",
+        "implementation": "recipeAdded := FALSE;\nrecipeDeleted := FALSE;\nrecipeModified := FALSE;\nerror := FALSE;\nstatus := 0;\nIF queryRecipe AND NOT qryPrev THEN\n    found := FALSE;\n    FOR i := 1 TO 10 DO\n        IF recipe[i].recipeID = recipeIn.recipeID THEN\n            recipeQueryResult := recipe[i];\n            found := TRUE;\n        END_IF\n    END_FOR\n    IF NOT found THEN\n        error := TRUE;\n        status := 16#8001;\n    END_IF\nEND_IF\nIF addRecipe AND NOT addPrev THEN\n    found := FALSE;\n    FOR i := 1 TO 10 DO\n        IF recipe[i].recipeID = recipeIn.recipeID THEN\n            found := TRUE;\n        END_IF\n    END_FOR\n    IF found THEN\n        error := TRUE;\n        status := 16#8002;\n    ELSE\n        slot := 0;\n        FOR i := 1 TO 10 DO\n            IF recipe[i].recipeID = 0 AND slot = 0 THEN\n                slot := i;\n            END_IF\n        END_FOR\n        IF slot = 0 THEN\n            error := TRUE;\n            status := 16#8003;\n        ELSE\n            recipe[slot] := recipeIn;\n            recipeAdded := TRUE;\n        END_IF\n    END_IF\nEND_IF\nIF deleteRecipe AND NOT delPrev THEN\n    found := FALSE;\n    FOR i := 1 TO 10 DO\n        IF recipe[i].recipeID = recipeIn.recipeID THEN\n            recipe[i].recipeID := 0;\n            found := TRUE;\n            recipeDeleted := TRUE;\n        END_IF\n    END_FOR\n    IF NOT found THEN\n        error := TRUE;\n        status := 16#8004;\n    END_IF\nEND_IF\nIF modifyRecipe AND NOT modPrev THEN\n    found := FALSE;\n    FOR i := 1 TO 10 DO\n        IF recipe[i].recipeID = recipeIn.recipeID THEN\n            recipe[i] := recipeIn;\n            found := TRUE;\n            recipeModified := TRUE;\n        END_IF\n    END_FOR\n    IF NOT found THEN\n        error := TRUE;\n        status := 16#8005;\n    END_IF\nEND_IF\naddPrev := addRecipe;\ndelPrev := deleteRecipe;\nmodPrev := modifyRecipe;\nqryPrev := queryRecipe;\n"
+      },
+      {
+        "name": "PLC_PRG",
+        "kind": "program",
+        "declaration": "PROGRAM PLC_PRG\nVAR\n    fb : RecipeMgmt;\n    db : ARRAY[1..10] OF ST_Recipe;\nEND_VAR\n",
+        "implementation": "fb(addRecipe := FALSE, deleteRecipe := FALSE, modifyRecipe := FALSE,\n   queryRecipe := FALSE, recipeIn := db[1], recipe := db);\n"
+      }
+    ]
+  }
+}
