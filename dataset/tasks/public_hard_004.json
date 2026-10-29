@@ -1,0 +1,250 @@
+{
+  "id": "public_hard_004",
+  "source": "public",
+  "difficulty": "hard",
+  "title": "柔性加工控制",
+  "pou": {
+    "type": "function_block",
+    "name": "FlexProcess"
+  },
+  "requirement": {
+    "en": "A line has 5 stations (1 feed, 2..4 processing, 5 output). processSequence holds the station numbers each product visits; processLength 1..8 is the active length from processSequence[1], final entry is 5. At start (sensor1 + station1Start) query the first sequence entry and move the conveyor to that station; on station2Complete..4Complete query the next entry and move accordingly until delivered to station 5.",
+    "zh": "生产线有 5 个工位(1 上料、2..4 加工、5 成品)。processSequence 存储每个产品要经过的工位号；processLength 1..8 为有效长度，从 processSequence[1] 起，最后一项为 5。开始时(sensor1 且 station1Start) 查询第一个序列项并把输送带移到对应工位；收到 station2Complete..4Complete 后查询下一项并继续移动，直到送达 5 号工位。"
+  },
+  "interface": {
+    "duts": [],
+    "inputs": [
+      {
+        "name": "processLength",
+        "type": "USINT",
+        "desc": "有效序列长度 1..8"
+      },
+      {
+        "name": "sensor1",
+        "type": "BOOL",
+        "desc": "1# 传感器"
+      },
+      {
+        "name": "sensor2",
+        "type": "BOOL",
+        "desc": "2# 传感器"
+      },
+      {
+        "name": "sensor3",
+        "type": "BOOL",
+        "desc": "3# 传感器"
+      },
+      {
+        "name": "sensor4",
+        "type": "BOOL",
+        "desc": "4# 传感器"
+      },
+      {
+        "name": "sensor5",
+        "type": "BOOL",
+        "desc": "5# 传感器"
+      },
+      {
+        "name": "station1Start",
+        "type": "BOOL",
+        "desc": "1# 启动按钮"
+      },
+      {
+        "name": "station2Complete",
+        "type": "BOOL",
+        "desc": "2# 加工完成"
+      },
+      {
+        "name": "station3Complete",
+        "type": "BOOL",
+        "desc": "3# 加工完成"
+      },
+      {
+        "name": "station4Complete",
+        "type": "BOOL",
+        "desc": "4# 加工完成"
+      },
+      {
+        "name": "processSequence",
+        "type": "ARRAY[1..8] OF USINT",
+        "desc": "加工序列"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "conveyorLeft",
+        "type": "BOOL",
+        "desc": "输送带左转"
+      },
+      {
+        "name": "conveyorRight",
+        "type": "BOOL",
+        "desc": "输送带右转"
+      }
+    ],
+    "inouts": []
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "左右转互斥。",
+      "formula": "G(!(conveyorLeft && conveyorRight))"
+    },
+    {
+      "id": "P2",
+      "description": "最终送达 5 号工位。",
+      "formula": "G((sensor1 && station1Start) -> F(sensor5))"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "按序列 1→2→4→5 移动",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "processLength": 3,
+            "sensor1": true,
+            "sensor2": false,
+            "sensor3": false,
+            "sensor4": false,
+            "sensor5": false,
+            "station1Start": true,
+            "station2Complete": false,
+            "station3Complete": false,
+            "station4Complete": false,
+            "processSequence": [
+              2,
+              4,
+              5,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          "expect": {}
+        },
+        {
+          "inputs": {
+            "processLength": 3,
+            "sensor1": false,
+            "sensor2": false,
+            "sensor3": false,
+            "sensor4": false,
+            "sensor5": false,
+            "station1Start": false,
+            "station2Complete": false,
+            "station3Complete": false,
+            "station4Complete": false,
+            "processSequence": [
+              2,
+              4,
+              5,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          "expect": {
+            "conveyorRight": true
+          }
+        },
+        {
+          "inputs": {
+            "processLength": 3,
+            "sensor1": false,
+            "sensor2": true,
+            "sensor3": false,
+            "sensor4": false,
+            "sensor5": false,
+            "station1Start": false,
+            "station2Complete": false,
+            "station3Complete": false,
+            "station4Complete": false,
+            "processSequence": [
+              2,
+              4,
+              5,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          "expect": {
+            "conveyorRight": false
+          }
+        },
+        {
+          "inputs": {
+            "processLength": 3,
+            "sensor1": false,
+            "sensor2": true,
+            "sensor3": false,
+            "sensor4": false,
+            "sensor5": false,
+            "station1Start": false,
+            "station2Complete": true,
+            "station3Complete": false,
+            "station4Complete": false,
+            "processSequence": [
+              2,
+              4,
+              5,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          "expect": {}
+        },
+        {
+          "inputs": {
+            "processLength": 3,
+            "sensor1": false,
+            "sensor2": false,
+            "sensor3": false,
+            "sensor4": false,
+            "sensor5": false,
+            "station1Start": false,
+            "station2Complete": false,
+            "station3Complete": false,
+            "station4Complete": false,
+            "processSequence": [
+              2,
+              4,
+              5,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          "expect": {
+            "conveyorRight": true
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "FlexProcess",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK FlexProcess\nVAR_INPUT\n    processLength : USINT;\n    sensor1 : BOOL;\n    sensor2 : BOOL;\n    sensor3 : BOOL;\n    sensor4 : BOOL;\n    sensor5 : BOOL;\n    station1Start : BOOL;\n    station2Complete : BOOL;\n    station3Complete : BOOL;\n    station4Complete : BOOL;\n    processSequence : ARRAY[1..8] OF USINT;\nEND_VAR\nVAR_OUTPUT\n    conveyorLeft : BOOL;\n    conveyorRight : BOOL;\nEND_VAR\nVAR\n    stage : INT := 0;\n    seqIdx : USINT;\n    current : USINT;\n    target : USINT;\nEND_VAR\n",
+        "implementation": "conveyorLeft := FALSE;\nconveyorRight := FALSE;\nCASE stage OF\n0:\n    IF sensor1 AND station1Start THEN\n        seqIdx := 1;\n        current := 1;\n        stage := 1;\n    END_IF\n1:\n    target := processSequence[seqIdx];\n    IF target > current THEN\n        conveyorRight := TRUE;\n    ELSIF target < current THEN\n        conveyorLeft := TRUE;\n    END_IF\n    IF (target = 1 AND sensor1) OR (target = 2 AND sensor2)\n        OR (target = 3 AND sensor3) OR (target = 4 AND sensor4)\n        OR (target = 5 AND sensor5) THEN\n        current := target;\n        IF target = 5 THEN\n            stage := 3;\n        ELSE\n            stage := 2;\n        END_IF\n    END_IF\n2:\n    IF (current = 2 AND station2Complete)\n        OR (current = 3 AND station3Complete)\n        OR (current = 4 AND station4Complete) THEN\n        seqIdx := seqIdx + 1;\n        stage := 1;\n    END_IF\n3:\nEND_CASE\n"
+      }
+    ]
+  }
+}

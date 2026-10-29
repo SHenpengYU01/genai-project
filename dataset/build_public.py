@@ -2541,6 +2541,397 @@ TASKS.append({
 })
 
 
+# ---------------------------------------------------------------------------
+# hard 4: Flexible Processing Control (process sequence conveyor)
+# ---------------------------------------------------------------------------
+TASKS.append({
+    "id": "public_hard_004",
+    "source": "public",
+    "difficulty": "hard",
+    "title": "柔性加工控制",
+    "pou": {"type": "function_block", "name": "FlexProcess"},
+    "requirement": {
+        "en": (
+            "A line has 5 stations (1 feed, 2..4 processing, 5 output). processSequence "
+            "holds the station numbers each product visits; processLength 1..8 is the "
+            "active length from processSequence[1], final entry is 5. At start (sensor1 "
+            "+ station1Start) query the first sequence entry and move the conveyor to "
+            "that station; on station2Complete..4Complete query the next entry and move "
+            "accordingly until delivered to station 5."
+        ),
+        "zh": (
+            "生产线有 5 个工位(1 上料、2..4 加工、5 成品)。processSequence 存储每个产品要经过的"
+            "工位号；processLength 1..8 为有效长度，从 processSequence[1] 起，最后一项为 5。开始时"
+            "(sensor1 且 station1Start) 查询第一个序列项并把输送带移到对应工位；收到 "
+            "station2Complete..4Complete 后查询下一项并继续移动，直到送达 5 号工位。"
+        ),
+    },
+    "interface": {
+        "duts": [],
+        "inputs": [
+            {"name": "processLength", "type": "USINT", "desc": "有效序列长度 1..8"},
+            {"name": "sensor1", "type": "BOOL", "desc": "1# 传感器"},
+            {"name": "sensor2", "type": "BOOL", "desc": "2# 传感器"},
+            {"name": "sensor3", "type": "BOOL", "desc": "3# 传感器"},
+            {"name": "sensor4", "type": "BOOL", "desc": "4# 传感器"},
+            {"name": "sensor5", "type": "BOOL", "desc": "5# 传感器"},
+            {"name": "station1Start", "type": "BOOL", "desc": "1# 启动按钮"},
+            {"name": "station2Complete", "type": "BOOL", "desc": "2# 加工完成"},
+            {"name": "station3Complete", "type": "BOOL", "desc": "3# 加工完成"},
+            {"name": "station4Complete", "type": "BOOL", "desc": "4# 加工完成"},
+            {"name": "processSequence", "type": "ARRAY[1..8] OF USINT", "desc": "加工序列"},
+        ],
+        "outputs": [
+            {"name": "conveyorLeft", "type": "BOOL", "desc": "输送带左转"},
+            {"name": "conveyorRight", "type": "BOOL", "desc": "输送带右转"},
+        ],
+        "inouts": [],
+    },
+    "ltl_specs": [
+        {"id": "P1", "description": "左右转互斥。",
+         "formula": "G(!(conveyorLeft && conveyorRight))"},
+        {"id": "P2", "description": "最终送达 5 号工位。",
+         "formula": "G((sensor1 && station1Start) -> F(sensor5))"},
+    ],
+    "test_cases": [
+        {"id": "TC1", "description": "按序列 1→2→4→5 移动", "scan_ms": 10, "steps": [
+            {"inputs": {"processLength": 3, "sensor1": True, "sensor2": False,
+                        "sensor3": False, "sensor4": False, "sensor5": False,
+                        "station1Start": True, "station2Complete": False,
+                        "station3Complete": False, "station4Complete": False,
+                        "processSequence": [2, 4, 5, 0, 0, 0, 0, 0]},
+             "expect": {}},
+            {"inputs": {"processLength": 3, "sensor1": False, "sensor2": False,
+                        "sensor3": False, "sensor4": False, "sensor5": False,
+                        "station1Start": False, "station2Complete": False,
+                        "station3Complete": False, "station4Complete": False,
+                        "processSequence": [2, 4, 5, 0, 0, 0, 0, 0]},
+             "expect": {"conveyorRight": True}},
+            {"inputs": {"processLength": 3, "sensor1": False, "sensor2": True,
+                        "sensor3": False, "sensor4": False, "sensor5": False,
+                        "station1Start": False, "station2Complete": False,
+                        "station3Complete": False, "station4Complete": False,
+                        "processSequence": [2, 4, 5, 0, 0, 0, 0, 0]},
+             "expect": {"conveyorRight": False}},
+            {"inputs": {"processLength": 3, "sensor1": False, "sensor2": True,
+                        "sensor3": False, "sensor4": False, "sensor5": False,
+                        "station1Start": False, "station2Complete": True,
+                        "station3Complete": False, "station4Complete": False,
+                        "processSequence": [2, 4, 5, 0, 0, 0, 0, 0]},
+             "expect": {}},
+            {"inputs": {"processLength": 3, "sensor1": False, "sensor2": False,
+                        "sensor3": False, "sensor4": False, "sensor5": False,
+                        "station1Start": False, "station2Complete": False,
+                        "station3Complete": False, "station4Complete": False,
+                        "processSequence": [2, 4, 5, 0, 0, 0, 0, 0]},
+             "expect": {"conveyorRight": True}},
+        ]},
+    ],
+    "reference": {
+        "duts": [],
+        "pous": [{
+            "name": "FlexProcess",
+            "kind": "function_block",
+            "declaration": (
+                "FUNCTION_BLOCK FlexProcess\n"
+                "VAR_INPUT\n"
+                "    processLength : USINT;\n"
+                "    sensor1 : BOOL;\n"
+                "    sensor2 : BOOL;\n"
+                "    sensor3 : BOOL;\n"
+                "    sensor4 : BOOL;\n"
+                "    sensor5 : BOOL;\n"
+                "    station1Start : BOOL;\n"
+                "    station2Complete : BOOL;\n"
+                "    station3Complete : BOOL;\n"
+                "    station4Complete : BOOL;\n"
+                "    processSequence : ARRAY[1..8] OF USINT;\n"
+                "END_VAR\n"
+                "VAR_OUTPUT\n"
+                "    conveyorLeft : BOOL;\n"
+                "    conveyorRight : BOOL;\n"
+                "END_VAR\n"
+                "VAR\n"
+                "    stage : INT := 0;\n"
+                "    seqIdx : USINT;\n"
+                "    current : USINT;\n"
+                "    target : USINT;\n"
+                "END_VAR\n"),
+            "implementation": (
+                "conveyorLeft := FALSE;\n"
+                "conveyorRight := FALSE;\n"
+                "CASE stage OF\n"
+                "0:\n"
+                "    IF sensor1 AND station1Start THEN\n"
+                "        seqIdx := 1;\n"
+                "        current := 1;\n"
+                "        stage := 1;\n"
+                "    END_IF\n"
+                "1:\n"
+                "    target := processSequence[seqIdx];\n"
+                "    IF target > current THEN\n"
+                "        conveyorRight := TRUE;\n"
+                "    ELSIF target < current THEN\n"
+                "        conveyorLeft := TRUE;\n"
+                "    END_IF\n"
+                "    IF (target = 1 AND sensor1) OR (target = 2 AND sensor2)\n"
+                "        OR (target = 3 AND sensor3) OR (target = 4 AND sensor4)\n"
+                "        OR (target = 5 AND sensor5) THEN\n"
+                "        current := target;\n"
+                "        IF target = 5 THEN\n"
+                "            stage := 3;\n"
+                "        ELSE\n"
+                "            stage := 2;\n"
+                "        END_IF\n"
+                "    END_IF\n"
+                "2:\n"
+                "    IF (current = 2 AND station2Complete)\n"
+                "        OR (current = 3 AND station3Complete)\n"
+                "        OR (current = 4 AND station4Complete) THEN\n"
+                "        seqIdx := seqIdx + 1;\n"
+                "        stage := 1;\n"
+                "    END_IF\n"
+                "3:\n"
+                "END_CASE\n"),
+        }],
+    },
+})
+
+# ---------------------------------------------------------------------------
+# hard 5: Mechanical Arm Control (4 modes)
+# ---------------------------------------------------------------------------
+TASKS.append({
+    "id": "public_hard_005",
+    "source": "public",
+    "difficulty": "hard",
+    "title": "机械臂控制",
+    "pou": {"type": "function_block", "name": "MechArm"},
+    "requirement": {
+        "en": (
+            "Control an arm with six actions (down/up/left/right/grip/release) and four "
+            "mutually-exclusive modes. Manual: each button moves its axis while the "
+            "corresponding limit switch is off. Single-step: each Start press runs one "
+            "preset action until its limit. Single-cycle: Start runs the full cycle "
+            "down-grip-up-right-down-release-up-left. Continuous: Start repeats the "
+            "cycle. Emergency stop stops everything."
+        ),
+        "zh": (
+            "控制一个六动作(下/上/左/右/抓/放)机械臂，四种互斥模式。手动：各按钮在对应限位未到位时"
+            "驱动对应动作。单步：每次按 Start 执行一个预设动作直至到位。单周期：按 Start 执行完整周期"
+            "下-抓-上-右-下-放-上-左。连续：按 Start 后循环执行。急停可随时停止所有动作。"
+        ),
+    },
+    "interface": {
+        "duts": [],
+        "inputs": [
+            {"name": "ManualMode", "type": "BOOL", "desc": "手动模式"},
+            {"name": "SingleStepMode", "type": "BOOL", "desc": "单步模式"},
+            {"name": "SingleCycleMode", "type": "BOOL", "desc": "单周期模式"},
+            {"name": "ContinuousMode", "type": "BOOL", "desc": "连续模式"},
+            {"name": "EmergencyStop", "type": "BOOL", "desc": "FALSE 急停"},
+            {"name": "Start", "type": "BOOL", "desc": "启动"},
+            {"name": "DownButton", "type": "BOOL", "desc": "下降按钮"},
+            {"name": "UpButton", "type": "BOOL", "desc": "上升按钮"},
+            {"name": "LeftButton", "type": "BOOL", "desc": "左移按钮"},
+            {"name": "RightButton", "type": "BOOL", "desc": "右移按钮"},
+            {"name": "GripButton", "type": "BOOL", "desc": "抓取按钮"},
+            {"name": "ReleaseButton", "type": "BOOL", "desc": "释放按钮"},
+            {"name": "DownLimitSwitch", "type": "BOOL", "desc": "下降到位"},
+            {"name": "UpLimitSwitch", "type": "BOOL", "desc": "上升到位"},
+            {"name": "LeftLimitSwitch", "type": "BOOL", "desc": "左移到位"},
+            {"name": "RightLimitSwitch", "type": "BOOL", "desc": "右移到位"},
+            {"name": "GripLimitSwitch", "type": "BOOL", "desc": "抓取到位"},
+            {"name": "ReleaseLimitSwitch", "type": "BOOL", "desc": "释放到位"},
+        ],
+        "outputs": [
+            {"name": "MoveDown", "type": "BOOL", "desc": "下降命令"},
+            {"name": "MoveUp", "type": "BOOL", "desc": "上升命令"},
+            {"name": "MoveLeft", "type": "BOOL", "desc": "左移命令"},
+            {"name": "MoveRight", "type": "BOOL", "desc": "右移命令"},
+            {"name": "ActivateGrip", "type": "BOOL", "desc": "抓取命令"},
+            {"name": "ActivateRelease", "type": "BOOL", "desc": "释放命令"},
+        ],
+        "inouts": [],
+    },
+    "ltl_specs": [
+        {"id": "P1", "description": "急停时所有动作停止。",
+         "formula": "G(!EmergencyStop -> (!MoveDown && !MoveUp && !MoveLeft && !MoveRight && !ActivateGrip && !ActivateRelease))"},
+    ],
+    "test_cases": [
+        {"id": "TC1", "description": "手动模式按钮驱动与到位停止", "scan_ms": 10, "steps": [
+            {"inputs": {"ManualMode": True, "SingleStepMode": False, "SingleCycleMode": False,
+                        "ContinuousMode": False, "EmergencyStop": True, "Start": False,
+                        "DownButton": True, "UpButton": False, "LeftButton": False,
+                        "RightButton": False, "GripButton": False, "ReleaseButton": False,
+                        "DownLimitSwitch": False, "UpLimitSwitch": True, "LeftLimitSwitch": True,
+                        "RightLimitSwitch": True, "GripLimitSwitch": True, "ReleaseLimitSwitch": True},
+             "expect": {"MoveDown": True}},
+            {"inputs": {"ManualMode": True, "SingleStepMode": False, "SingleCycleMode": False,
+                        "ContinuousMode": False, "EmergencyStop": True, "Start": False,
+                        "DownButton": True, "UpButton": False, "LeftButton": False,
+                        "RightButton": False, "GripButton": False, "ReleaseButton": False,
+                        "DownLimitSwitch": True, "UpLimitSwitch": True, "LeftLimitSwitch": True,
+                        "RightLimitSwitch": True, "GripLimitSwitch": True, "ReleaseLimitSwitch": True},
+             "expect": {"MoveDown": False}},
+        ]},
+        {"id": "TC2", "description": "急停停止所有动作", "scan_ms": 10, "steps": [
+            {"inputs": {"ManualMode": False, "SingleStepMode": True, "SingleCycleMode": False,
+                        "ContinuousMode": False, "EmergencyStop": False, "Start": False,
+                        "DownButton": False, "UpButton": False, "LeftButton": False,
+                        "RightButton": False, "GripButton": False, "ReleaseButton": False,
+                        "DownLimitSwitch": False, "UpLimitSwitch": True, "LeftLimitSwitch": True,
+                        "RightLimitSwitch": True, "GripLimitSwitch": True, "ReleaseLimitSwitch": True},
+             "expect": {"MoveDown": False, "MoveUp": False, "MoveLeft": False, "MoveRight": False,
+                        "ActivateGrip": False, "ActivateRelease": False}},
+        ]},
+    ],
+    "reference": {
+        "duts": [],
+        "pous": [{
+            "name": "MechArm",
+            "kind": "function_block",
+            "declaration": (
+                "FUNCTION_BLOCK MechArm\n"
+                "VAR_INPUT\n"
+                "    ManualMode : BOOL;\n"
+                "    SingleStepMode : BOOL;\n"
+                "    SingleCycleMode : BOOL;\n"
+                "    ContinuousMode : BOOL;\n"
+                "    EmergencyStop : BOOL;\n"
+                "    Start : BOOL;\n"
+                "    DownButton : BOOL;\n"
+                "    UpButton : BOOL;\n"
+                "    LeftButton : BOOL;\n"
+                "    RightButton : BOOL;\n"
+                "    GripButton : BOOL;\n"
+                "    ReleaseButton : BOOL;\n"
+                "    DownLimitSwitch : BOOL;\n"
+                "    UpLimitSwitch : BOOL;\n"
+                "    LeftLimitSwitch : BOOL;\n"
+                "    RightLimitSwitch : BOOL;\n"
+                "    GripLimitSwitch : BOOL;\n"
+                "    ReleaseLimitSwitch : BOOL;\n"
+                "END_VAR\n"
+                "VAR_OUTPUT\n"
+                "    MoveDown : BOOL;\n"
+                "    MoveUp : BOOL;\n"
+                "    MoveLeft : BOOL;\n"
+                "    MoveRight : BOOL;\n"
+                "    ActivateGrip : BOOL;\n"
+                "    ActivateRelease : BOOL;\n"
+                "END_VAR\n"
+                "VAR\n"
+                "    step : INT := 0;\n"
+                "    executing : BOOL;\n"
+                "    startPrev : BOOL;\n"
+                "    startEdge : BOOL;\n"
+                "END_VAR\n"),
+            "implementation": (
+                "MoveDown := FALSE;\n"
+                "MoveUp := FALSE;\n"
+                "MoveLeft := FALSE;\n"
+                "MoveRight := FALSE;\n"
+                "ActivateGrip := FALSE;\n"
+                "ActivateRelease := FALSE;\n"
+                "IF NOT EmergencyStop THEN\n"
+                "    executing := FALSE;\n"
+                "    step := 0;\n"
+                "ELSIF ManualMode THEN\n"
+                "    MoveDown := DownButton AND NOT DownLimitSwitch;\n"
+                "    MoveUp := UpButton AND NOT UpLimitSwitch;\n"
+                "    MoveLeft := LeftButton AND NOT LeftLimitSwitch;\n"
+                "    MoveRight := RightButton AND NOT RightLimitSwitch;\n"
+                "    ActivateGrip := GripButton AND NOT GripLimitSwitch;\n"
+                "    ActivateRelease := ReleaseButton AND NOT ReleaseLimitSwitch;\n"
+                "    step := 0;\n"
+                "ELSE\n"
+                "    startEdge := Start AND NOT startPrev;\n"
+                "    IF startEdge THEN\n"
+                "        executing := TRUE;\n"
+                "        IF step >= 8 THEN\n"
+                "            step := 0;\n"
+                "        END_IF\n"
+                "    END_IF\n"
+                "    CASE step OF\n"
+                "    0:\n"
+                "        IF executing THEN\n"
+                "            MoveDown := TRUE;\n"
+                "            IF DownLimitSwitch THEN\n"
+                "                IF SingleStepMode THEN executing := FALSE; END_IF\n"
+                "                step := 1;\n"
+                "            END_IF\n"
+                "        END_IF\n"
+                "    1:\n"
+                "        IF executing THEN\n"
+                "            ActivateGrip := TRUE;\n"
+                "            IF GripLimitSwitch THEN\n"
+                "                IF SingleStepMode THEN executing := FALSE; END_IF\n"
+                "                step := 2;\n"
+                "            END_IF\n"
+                "        END_IF\n"
+                "    2:\n"
+                "        IF executing THEN\n"
+                "            MoveUp := TRUE;\n"
+                "            IF UpLimitSwitch THEN\n"
+                "                IF SingleStepMode THEN executing := FALSE; END_IF\n"
+                "                step := 3;\n"
+                "            END_IF\n"
+                "        END_IF\n"
+                "    3:\n"
+                "        IF executing THEN\n"
+                "            MoveRight := TRUE;\n"
+                "            IF RightLimitSwitch THEN\n"
+                "                IF SingleStepMode THEN executing := FALSE; END_IF\n"
+                "                step := 4;\n"
+                "            END_IF\n"
+                "        END_IF\n"
+                "    4:\n"
+                "        IF executing THEN\n"
+                "            MoveDown := TRUE;\n"
+                "            IF DownLimitSwitch THEN\n"
+                "                IF SingleStepMode THEN executing := FALSE; END_IF\n"
+                "                step := 5;\n"
+                "            END_IF\n"
+                "        END_IF\n"
+                "    5:\n"
+                "        IF executing THEN\n"
+                "            ActivateRelease := TRUE;\n"
+                "            IF ReleaseLimitSwitch THEN\n"
+                "                IF SingleStepMode THEN executing := FALSE; END_IF\n"
+                "                step := 6;\n"
+                "            END_IF\n"
+                "        END_IF\n"
+                "    6:\n"
+                "        IF executing THEN\n"
+                "            MoveUp := TRUE;\n"
+                "            IF UpLimitSwitch THEN\n"
+                "                IF SingleStepMode THEN executing := FALSE; END_IF\n"
+                "                step := 7;\n"
+                "            END_IF\n"
+                "        END_IF\n"
+                "    7:\n"
+                "        IF executing THEN\n"
+                "            MoveLeft := TRUE;\n"
+                "            IF LeftLimitSwitch THEN\n"
+                "                IF SingleStepMode THEN\n"
+                "                    executing := FALSE;\n"
+                "                    step := 0;\n"
+                "                ELSIF SingleCycleMode THEN\n"
+                "                    executing := FALSE;\n"
+                "                    step := 8;\n"
+                "                ELSE\n"
+                "                    step := 0;\n"
+                "                END_IF\n"
+                "            END_IF\n"
+                "        END_IF\n"
+                "    END_CASE\n"
+                "END_IF\n"
+                "startPrev := Start;\n"),
+        }],
+    },
+})
+
+
 def dump():
     os.makedirs(OUT, exist_ok=True)
     for t in TASKS:
