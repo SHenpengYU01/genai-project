@@ -1,0 +1,175 @@
+{
+  "id": "public_medium_002",
+  "source": "public",
+  "difficulty": "medium",
+  "title": "移动平均计算",
+  "pou": {
+    "type": "function_block",
+    "name": "MovingAverage"
+  },
+  "requirement": {
+    "en": "Calculate a moving arithmetic mean over a window. cyclicExecution TRUE reads a new value each cycle; a rising edge of trigger also reads a new value; reset clears the average; windowSize outside 1..100 sets error and status 16#8200.",
+    "zh": "计算滑动算术平均。cyclicExecution 为 TRUE 时每个周期读入新值并更新平均；trigger 的上升沿也读入新值并更新；reset 为 TRUE 时复位计算；windowSize 不在 1..100 时输出错误并置状态码 16#8200。"
+  },
+  "interface": {
+    "duts": [],
+    "inputs": [
+      {
+        "name": "cyclicExecution",
+        "type": "BOOL",
+        "desc": "周期读取"
+      },
+      {
+        "name": "trigger",
+        "type": "BOOL",
+        "desc": "外部触发"
+      },
+      {
+        "name": "value",
+        "type": "LREAL",
+        "desc": "新数据值"
+      },
+      {
+        "name": "windowSize",
+        "type": "INT",
+        "desc": "窗口大小 1..100"
+      },
+      {
+        "name": "reset",
+        "type": "BOOL",
+        "desc": "复位信号"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "average",
+        "type": "LREAL",
+        "desc": "滑动平均"
+      },
+      {
+        "name": "windowSizeReached",
+        "type": "BOOL",
+        "desc": "是否达到最大窗口"
+      },
+      {
+        "name": "error",
+        "type": "BOOL",
+        "desc": "错误"
+      },
+      {
+        "name": "status",
+        "type": "WORD",
+        "desc": "状态码"
+      }
+    ],
+    "inouts": []
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "窗口长度非法时报错。",
+      "formula": "G((windowSize < 1 || windowSize > 100) -> error)"
+    },
+    {
+      "id": "P2",
+      "description": "无错误时状态码为 0。",
+      "formula": "G(!error -> status = 0)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "窗口滑动平均",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "cyclicExecution": true,
+            "trigger": false,
+            "value": 1.0,
+            "windowSize": 3,
+            "reset": false
+          },
+          "expect": {
+            "average": 1.0,
+            "windowSizeReached": false,
+            "error": false
+          }
+        },
+        {
+          "inputs": {
+            "cyclicExecution": true,
+            "trigger": false,
+            "value": 2.0,
+            "windowSize": 3,
+            "reset": false
+          },
+          "expect": {
+            "average": 1.5,
+            "windowSizeReached": false,
+            "error": false
+          }
+        },
+        {
+          "inputs": {
+            "cyclicExecution": true,
+            "trigger": false,
+            "value": 3.0,
+            "windowSize": 3,
+            "reset": false
+          },
+          "expect": {
+            "average": 2.0,
+            "windowSizeReached": true,
+            "error": false
+          }
+        },
+        {
+          "inputs": {
+            "cyclicExecution": true,
+            "trigger": false,
+            "value": 4.0,
+            "windowSize": 3,
+            "reset": false
+          },
+          "expect": {
+            "average": 3.0,
+            "windowSizeReached": true,
+            "error": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "窗口长度非法报错",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "cyclicExecution": false,
+            "trigger": false,
+            "value": 1.0,
+            "windowSize": 0,
+            "reset": false
+          },
+          "expect": {
+            "error": true,
+            "status": 33280
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "duts": [],
+    "pous": [
+      {
+        "name": "MovingAverage",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK MovingAverage\nVAR_INPUT\n    cyclicExecution : BOOL;\n    trigger : BOOL;\n    value : LREAL;\n    windowSize : INT;\n    reset : BOOL;\nEND_VAR\nVAR_OUTPUT\n    average : LREAL;\n    windowSizeReached : BOOL;\n    error : BOOL;\n    status : WORD;\nEND_VAR\nVAR\n    buffer : ARRAY[1..100] OF LREAL;\n    head : INT := 0;\n    count : INT := 0;\n    sum : LREAL := 0.0;\n    trigPrev : BOOL;\n    trigRising : BOOL;\nEND_VAR\n",
+        "implementation": "error := FALSE;\nstatus := 0;\nIF reset THEN\n    head := 0;\n    count := 0;\n    sum := 0.0;\n    average := 0.0;\n    windowSizeReached := FALSE;\nEND_IF\nIF windowSize < 1 OR windowSize > 100 THEN\n    error := TRUE;\n    status := 16#8200;\nELSE\n    trigRising := trigger AND NOT trigPrev;\n    trigPrev := trigger;\n    IF cyclicExecution OR trigRising THEN\n        IF count < windowSize THEN\n            count := count + 1;\n            head := count;\n            buffer[head] := value;\n            sum := sum + value;\n        ELSE\n            head := head + 1;\n            IF head > windowSize THEN\n                head := 1;\n            END_IF\n            sum := sum - buffer[head] + value;\n            buffer[head] := value;\n        END_IF\n        windowSizeReached := (count >= windowSize);\n        IF windowSizeReached THEN\n            average := sum / INT_TO_LREAL(windowSize);\n        END_IF\n    END_IF\nEND_IF\n"
+      }
+    ]
+  }
+}

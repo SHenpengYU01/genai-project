@@ -26,7 +26,10 @@ def check_task(t):
                 errs.append("pou missing %s" % k)
     if "interface" in t:
         itf = t["interface"]
-        for group in ("duts", "inputs", "outputs", "inouts"):
+        for f in itf.get("duts", []):
+            if "name" not in f or "kind" not in f:
+                errs.append("interface duts entry missing name/kind")
+        for group in ("inputs", "outputs", "inouts"):
             for f in itf.get(group, []):
                 if "name" not in f or "type" not in f:
                     errs.append("interface %s entry missing name/type" % group)

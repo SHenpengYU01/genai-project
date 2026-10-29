@@ -807,6 +807,448 @@ TASKS.append({
 })
 
 
+# ---------------------------------------------------------------------------
+# medium 1: Multi-Pump Switching Control (struct + VAR_IN_OUT + caller)
+# ---------------------------------------------------------------------------
+TASKS.append({
+    "id": "public_medium_001",
+    "source": "public",
+    "difficulty": "medium",
+    "title": "多泵轮换供水控制",
+    "pou": {"type": "function_block", "name": "MultiPump"},
+    "requirement": {
+        "en": (
+            "A water-supply system has 5 pumps. mode selects manual (FALSE) or "
+            "automatic (TRUE). In manual mode each pump's RunComd follows its "
+            "selection. In automatic mode compare priorities and select the 3 "
+            "highest-priority pumps (three in use, two on standby). start starts the "
+            "selected pumps, stop stops all pumps."
+        ),
+        "zh": (
+            "供水系统有 5 台泵。mode 选择手动(FALSE)或自动(TRUE)。手动模式下每台泵的 "
+            "RunComd 跟随其 selection；自动模式下比较优先级，按'三用二备'自动选出 3 台"
+            "优先级更高的泵供水。start 启动所选泵，stop 停止所有泵。"
+        ),
+    },
+    "interface": {
+        "duts": [
+            {"name": "ST_Pump", "kind": "struct", "fields": [
+                {"name": "priority", "type": "INT", "desc": "优先级，越大越高"},
+                {"name": "selection", "type": "BOOL", "desc": "手动选中状态"},
+                {"name": "RunComd", "type": "BOOL", "desc": "运行命令"},
+            ]},
+        ],
+        "inputs": [
+            {"name": "mode", "type": "BOOL", "desc": "FALSE 手动 TRUE 自动"},
+            {"name": "start", "type": "BOOL", "desc": "启动所选泵"},
+            {"name": "stop", "type": "BOOL", "desc": "停止所有泵"},
+        ],
+        "outputs": [],
+        "inouts": [
+            {"name": "pumpGroup", "type": "ARRAY[1..5] OF ST_Pump",
+             "desc": "5 台泵记录，读 priority/selection，写 RunComd"},
+        ],
+    },
+    "ltl_specs": [
+        {"id": "P1", "description": "停止优先：stop 时所有泵停止。",
+         "formula": "G(stop -> !pumpGroup[1].RunComd)"},
+        {"id": "P2", "description": "手动：选中的泵在 start 时运行。",
+         "formula": "G((!mode && !stop && start && pumpGroup[1].selection) -> pumpGroup[1].RunComd)"},
+        {"id": "P3", "description": "手动：未选中的泵不运行。",
+         "formula": "G((!mode && !stop && start && !pumpGroup[1].selection) -> !pumpGroup[1].RunComd)"},
+    ],
+    "test_cases": [
+        {"id": "TC1", "description": "手动模式选中泵运行", "scan_ms": 10, "steps": [
+            {"inputs": {"mode": False, "start": False, "stop": False,
+                        "pumpGroup": [
+                            {"priority": 5, "selection": True},
+                            {"priority": 1, "selection": False},
+                            {"priority": 4, "selection": True},
+                            {"priority": 2, "selection": False},
+                            {"priority": 3, "selection": False}]},
+             "expect": {"pumpGroup": [{"RunComd": False}, {"RunComd": False},
+                                      {"RunComd": False}, {"RunComd": False},
+                                      {"RunComd": False}]}},
+            {"inputs": {"mode": False, "start": True, "stop": False,
+                        "pumpGroup": [
+                            {"priority": 5, "selection": True},
+                            {"priority": 1, "selection": False},
+                            {"priority": 4, "selection": True},
+                            {"priority": 2, "selection": False},
+                            {"priority": 3, "selection": False}]},
+             "expect": {"pumpGroup": [{"RunComd": True}, {"RunComd": False},
+                                      {"RunComd": True}, {"RunComd": False},
+                                      {"RunComd": False}]}},
+        ]},
+        {"id": "TC2", "description": "自动模式选出 3 台最高优先级泵", "scan_ms": 10, "steps": [
+            {"inputs": {"mode": True, "start": True, "stop": False,
+                        "pumpGroup": [
+                            {"priority": 5, "selection": False},
+                            {"priority": 1, "selection": False},
+                            {"priority": 4, "selection": False},
+                            {"priority": 2, "selection": False},
+                            {"priority": 3, "selection": False}]},
+             "expect": {"pumpGroup": [{"RunComd": True}, {"RunComd": False},
+                                      {"RunComd": True}, {"RunComd": False},
+                                      {"RunComd": True}]}},
+        ]},
+        {"id": "TC3", "description": "停止优先于启动", "scan_ms": 10, "steps": [
+            {"inputs": {"mode": True, "start": True, "stop": False,
+                        "pumpGroup": [
+                            {"priority": 5, "selection": False},
+                            {"priority": 1, "selection": False},
+                            {"priority": 4, "selection": False},
+                            {"priority": 2, "selection": False},
+                            {"priority": 3, "selection": False}]},
+             "expect": {"pumpGroup": [{"RunComd": True}, {"RunComd": False},
+                                      {"RunComd": True}, {"RunComd": False},
+                                      {"RunComd": True}]}},
+            {"inputs": {"mode": True, "start": True, "stop": True,
+                        "pumpGroup": [
+                            {"priority": 5, "selection": False},
+                            {"priority": 1, "selection": False},
+                            {"priority": 4, "selection": False},
+                            {"priority": 2, "selection": False},
+                            {"priority": 3, "selection": False}]},
+             "expect": {"pumpGroup": [{"RunComd": False}, {"RunComd": False},
+                                      {"RunComd": False}, {"RunComd": False},
+                                      {"RunComd": False}]}},
+        ]},
+    ],
+    "reference": {
+        "auto_wire": False,
+        "duts": [
+            {"name": "ST_Pump", "kind": "struct",
+             "declaration": "TYPE ST_Pump :\nSTRUCT\n    priority : INT;\n    selection : BOOL;\n    RunComd : BOOL;\nEND_STRUCT\nEND_TYPE\n"},
+        ],
+        "pous": [
+            {
+                "name": "MultiPump",
+                "kind": "function_block",
+                "declaration": (
+                    "FUNCTION_BLOCK MultiPump\n"
+                    "VAR_INPUT\n"
+                    "    mode : BOOL;\n"
+                    "    start : BOOL;\n"
+                    "    stop : BOOL;\n"
+                    "END_VAR\n"
+                    "VAR_IN_OUT\n"
+                    "    pumpGroup : ARRAY[1..5] OF ST_Pump;\n"
+                    "END_VAR\n"
+                    "VAR\n"
+                    "    i : INT;\n"
+                    "    j : INT;\n"
+                    "    higher : INT;\n"
+                    "END_VAR\n"),
+                "implementation": (
+                    "FOR i := 1 TO 5 DO\n"
+                    "    IF stop THEN\n"
+                    "        pumpGroup[i].RunComd := FALSE;\n"
+                    "    ELSIF start THEN\n"
+                    "        IF mode THEN\n"
+                    "            higher := 0;\n"
+                    "            FOR j := 1 TO 5 DO\n"
+                    "                IF pumpGroup[j].priority > pumpGroup[i].priority THEN\n"
+                    "                    higher := higher + 1;\n"
+                    "                END_IF\n"
+                    "            END_FOR\n"
+                    "            IF higher < 3 THEN\n"
+                    "                pumpGroup[i].RunComd := TRUE;\n"
+                    "            ELSE\n"
+                    "                pumpGroup[i].RunComd := FALSE;\n"
+                    "            END_IF\n"
+                    "        ELSE\n"
+                    "            pumpGroup[i].RunComd := pumpGroup[i].selection;\n"
+                    "        END_IF\n"
+                    "    END_IF\n"
+                    "END_FOR\n"),
+            },
+            {
+                "name": "PLC_PRG",
+                "kind": "program",
+                "declaration": (
+                    "PROGRAM PLC_PRG\n"
+                    "VAR\n"
+                    "    fb : MultiPump;\n"
+                    "    pumps : ARRAY[1..5] OF ST_Pump;\n"
+                    "END_VAR\n"),
+                "implementation": (
+                    "fb(mode := FALSE, start := FALSE, stop := FALSE, pumpGroup := pumps);\n"),
+            },
+        ],
+    },
+})
+
+# ---------------------------------------------------------------------------
+# medium 2: Calculate Moving Average
+# ---------------------------------------------------------------------------
+TASKS.append({
+    "id": "public_medium_002",
+    "source": "public",
+    "difficulty": "medium",
+    "title": "移动平均计算",
+    "pou": {"type": "function_block", "name": "MovingAverage"},
+    "requirement": {
+        "en": (
+            "Calculate a moving arithmetic mean over a window. cyclicExecution TRUE "
+            "reads a new value each cycle; a rising edge of trigger also reads a new "
+            "value; reset clears the average; windowSize outside 1..100 sets error and "
+            "status 16#8200."
+        ),
+        "zh": (
+            "计算滑动算术平均。cyclicExecution 为 TRUE 时每个周期读入新值并更新平均；"
+            "trigger 的上升沿也读入新值并更新；reset 为 TRUE 时复位计算；windowSize 不在 "
+            "1..100 时输出错误并置状态码 16#8200。"
+        ),
+    },
+    "interface": {
+        "duts": [],
+        "inputs": [
+            {"name": "cyclicExecution", "type": "BOOL", "desc": "周期读取"},
+            {"name": "trigger", "type": "BOOL", "desc": "外部触发"},
+            {"name": "value", "type": "LREAL", "desc": "新数据值"},
+            {"name": "windowSize", "type": "INT", "desc": "窗口大小 1..100"},
+            {"name": "reset", "type": "BOOL", "desc": "复位信号"},
+        ],
+        "outputs": [
+            {"name": "average", "type": "LREAL", "desc": "滑动平均"},
+            {"name": "windowSizeReached", "type": "BOOL", "desc": "是否达到最大窗口"},
+            {"name": "error", "type": "BOOL", "desc": "错误"},
+            {"name": "status", "type": "WORD", "desc": "状态码"},
+        ],
+        "inouts": [],
+    },
+    "ltl_specs": [
+        {"id": "P1", "description": "窗口长度非法时报错。",
+         "formula": "G((windowSize < 1 || windowSize > 100) -> error)"},
+        {"id": "P2", "description": "无错误时状态码为 0。",
+         "formula": "G(!error -> status = 0)"},
+    ],
+    "test_cases": [
+        {"id": "TC1", "description": "窗口滑动平均", "scan_ms": 10, "steps": [
+            {"inputs": {"cyclicExecution": True, "trigger": False, "value": 1.0,
+                        "windowSize": 3, "reset": False},
+             "expect": {"average": 1.0, "windowSizeReached": False, "error": False}},
+            {"inputs": {"cyclicExecution": True, "trigger": False, "value": 2.0,
+                        "windowSize": 3, "reset": False},
+             "expect": {"average": 1.5, "windowSizeReached": False, "error": False}},
+            {"inputs": {"cyclicExecution": True, "trigger": False, "value": 3.0,
+                        "windowSize": 3, "reset": False},
+             "expect": {"average": 2.0, "windowSizeReached": True, "error": False}},
+            {"inputs": {"cyclicExecution": True, "trigger": False, "value": 4.0,
+                        "windowSize": 3, "reset": False},
+             "expect": {"average": 3.0, "windowSizeReached": True, "error": False}},
+        ]},
+        {"id": "TC2", "description": "窗口长度非法报错", "scan_ms": 10, "steps": [
+            {"inputs": {"cyclicExecution": False, "trigger": False, "value": 1.0,
+                        "windowSize": 0, "reset": False},
+             "expect": {"error": True, "status": 33280}},
+        ]},
+    ],
+    "reference": {
+        "duts": [],
+        "pous": [{
+            "name": "MovingAverage",
+            "kind": "function_block",
+            "declaration": (
+                "FUNCTION_BLOCK MovingAverage\n"
+                "VAR_INPUT\n"
+                "    cyclicExecution : BOOL;\n"
+                "    trigger : BOOL;\n"
+                "    value : LREAL;\n"
+                "    windowSize : INT;\n"
+                "    reset : BOOL;\n"
+                "END_VAR\n"
+                "VAR_OUTPUT\n"
+                "    average : LREAL;\n"
+                "    windowSizeReached : BOOL;\n"
+                "    error : BOOL;\n"
+                "    status : WORD;\n"
+                "END_VAR\n"
+                "VAR\n"
+                "    buffer : ARRAY[1..100] OF LREAL;\n"
+                "    head : INT := 0;\n"
+                "    count : INT := 0;\n"
+                "    sum : LREAL := 0.0;\n"
+                "    trigPrev : BOOL;\n"
+                "    trigRising : BOOL;\n"
+                "END_VAR\n"),
+            "implementation": (
+                "error := FALSE;\n"
+                "status := 0;\n"
+                "IF reset THEN\n"
+                "    head := 0;\n"
+                "    count := 0;\n"
+                "    sum := 0.0;\n"
+                "    average := 0.0;\n"
+                "    windowSizeReached := FALSE;\n"
+                "END_IF\n"
+                "IF windowSize < 1 OR windowSize > 100 THEN\n"
+                "    error := TRUE;\n"
+                "    status := 16#8200;\n"
+                "ELSE\n"
+                "    trigRising := trigger AND NOT trigPrev;\n"
+                "    trigPrev := trigger;\n"
+                "    IF cyclicExecution OR trigRising THEN\n"
+                "        IF count < windowSize THEN\n"
+                "            count := count + 1;\n"
+                "            head := count;\n"
+                "            buffer[head] := value;\n"
+                "            sum := sum + value;\n"
+                "        ELSE\n"
+                "            head := head + 1;\n"
+                "            IF head > windowSize THEN\n"
+                "                head := 1;\n"
+                "            END_IF\n"
+                "            sum := sum - buffer[head] + value;\n"
+                "            buffer[head] := value;\n"
+                "        END_IF\n"
+                "        windowSizeReached := (count >= windowSize);\n"
+                "        IF windowSizeReached THEN\n"
+                "            average := sum / INT_TO_LREAL(windowSize);\n"
+                "        END_IF\n"
+                "    END_IF\n"
+                "END_IF\n"),
+        }],
+    },
+})
+
+# ---------------------------------------------------------------------------
+# medium 3: Temperature Logic Control (TON state machine)
+# ---------------------------------------------------------------------------
+TASKS.append({
+    "id": "public_medium_003",
+    "source": "public",
+    "difficulty": "medium",
+    "title": "温度控制逻辑",
+    "pou": {"type": "function_block", "name": "TempControl"},
+    "requirement": {
+        "en": (
+            "Compare TemperatureSensorInput with SetTemperature: heat when below, stop "
+            "when above. If the heater runs continuously over 5s, trigger overheat "
+            "protection, turn off the heater and wait 3s before lifting. Temperature "
+            "sensor below 0 or above 100 is a fault and turns the heater off."
+        ),
+        "zh": (
+            "比较 TemperatureSensorInput 与 SetTemperature：低于设定值加热，高于设定值停止。"
+            "若加热器连续工作超过 5s 则触发过热保护、自动关断，并须等待 3s 后才能解除保护。"
+            "温度传感器读数小于 0 或大于 100 视为传感器故障，关断加热器。"
+        ),
+    },
+    "interface": {
+        "duts": [],
+        "inputs": [
+            {"name": "TemperatureSensorInput", "type": "REAL", "desc": "实际温度"},
+            {"name": "SetTemperature", "type": "REAL", "desc": "设定温度"},
+        ],
+        "outputs": [
+            {"name": "CurrentTemperature", "type": "REAL", "desc": "当前温度显示"},
+            {"name": "SetTempDisplay", "type": "REAL", "desc": "设定温度显示"},
+            {"name": "HeaterStatus", "type": "BOOL", "desc": "加热器状态显示"},
+            {"name": "OverheatProtection", "type": "BOOL", "desc": "过热保护状态"},
+            {"name": "HeaterOutput", "type": "BOOL", "desc": "加热器控制输出"},
+        ],
+        "inouts": [],
+    },
+    "ltl_specs": [
+        {"id": "P1", "description": "传感器故障时关断加热器。",
+         "formula": "G((TemperatureSensorInput < 0 || TemperatureSensorInput > 100) -> !HeaterOutput)"},
+        {"id": "P2", "description": "低温且无故障/保护时加热。",
+         "formula": "G((TemperatureSensorInput < SetTemperature && !OverheatProtection) -> HeaterOutput)"},
+        {"id": "P3", "description": "过热保护时禁止加热。",
+         "formula": "G(OverheatProtection -> !HeaterOutput)"},
+    ],
+    "test_cases": [
+        {"id": "TC1", "description": "低温加热高温停止", "scan_ms": 1000, "steps": [
+            {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
+             "expect": {"HeaterOutput": True, "OverheatProtection": False}},
+            {"inputs": {"TemperatureSensorInput": 60.0, "SetTemperature": 50.0},
+             "expect": {"HeaterOutput": False, "OverheatProtection": False}},
+        ]},
+        {"id": "TC2", "description": "传感器故障关断", "scan_ms": 1000, "steps": [
+            {"inputs": {"TemperatureSensorInput": 150.0, "SetTemperature": 50.0},
+             "expect": {"HeaterOutput": False}},
+        ]},
+        {"id": "TC3", "description": "过热保护与恢复", "scan_ms": 1000, "steps": [
+            {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
+             "expect": {"HeaterOutput": True, "OverheatProtection": False}},
+            {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
+             "expect": {"HeaterOutput": True, "OverheatProtection": False}},
+            {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
+             "expect": {"HeaterOutput": True, "OverheatProtection": False}},
+            {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
+             "expect": {"HeaterOutput": True, "OverheatProtection": False}},
+            {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
+             "expect": {"HeaterOutput": False, "OverheatProtection": True}},
+            {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
+             "expect": {"HeaterOutput": False, "OverheatProtection": True}},
+            {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
+             "expect": {"HeaterOutput": False, "OverheatProtection": True}},
+            {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
+             "expect": {"HeaterOutput": False, "OverheatProtection": False}},
+            {"inputs": {"TemperatureSensorInput": 30.0, "SetTemperature": 50.0},
+             "expect": {"HeaterOutput": True, "OverheatProtection": False}},
+        ]},
+    ],
+    "reference": {
+        "duts": [],
+        "pous": [{
+            "name": "TempControl",
+            "kind": "function_block",
+            "declaration": (
+                "FUNCTION_BLOCK TempControl\n"
+                "VAR_INPUT\n"
+                "    TemperatureSensorInput : REAL;\n"
+                "    SetTemperature : REAL;\n"
+                "END_VAR\n"
+                "VAR_OUTPUT\n"
+                "    CurrentTemperature : REAL;\n"
+                "    SetTempDisplay : REAL;\n"
+                "    HeaterStatus : BOOL;\n"
+                "    OverheatProtection : BOOL;\n"
+                "    HeaterOutput : BOOL;\n"
+                "END_VAR\n"
+                "VAR\n"
+                "    phase : INT := 0;\n"
+                "    heatCmd : BOOL;\n"
+                "    heatTimer : TON;\n"
+                "    coolTimer : TON;\n"
+                "END_VAR\n"),
+            "implementation": (
+                "CurrentTemperature := TemperatureSensorInput;\n"
+                "SetTempDisplay := SetTemperature;\n"
+                "CASE phase OF\n"
+                "0:\n"
+                "    IF TemperatureSensorInput < 0.0 OR TemperatureSensorInput > 100.0 THEN\n"
+                "        heatCmd := FALSE;\n"
+                "    ELSIF TemperatureSensorInput < SetTemperature THEN\n"
+                "        heatCmd := TRUE;\n"
+                "    ELSIF TemperatureSensorInput > SetTemperature THEN\n"
+                "        heatCmd := FALSE;\n"
+                "    END_IF\n"
+                "    heatTimer(IN := heatCmd, PT := T#5s);\n"
+                "    IF heatTimer.Q THEN\n"
+                "        phase := 1;\n"
+                "        HeaterOutput := FALSE;\n"
+                "    ELSE\n"
+                "        HeaterOutput := heatCmd;\n"
+                "    END_IF\n"
+                "1:\n"
+                "    HeaterOutput := FALSE;\n"
+                "    coolTimer(IN := TRUE, PT := T#3s);\n"
+                "    IF coolTimer.Q THEN\n"
+                "        phase := 0;\n"
+                "        heatTimer(IN := FALSE, PT := T#5s);\n"
+                "        coolTimer(IN := FALSE, PT := T#3s);\n"
+                "    END_IF\n"
+                "END_CASE\n"
+                "OverheatProtection := (phase = 1);\n"
+                "HeaterStatus := HeaterOutput;\n"),
+        }],
+    },
+})
+
+
 def dump():
     os.makedirs(OUT, exist_ok=True)
     for t in TASKS:

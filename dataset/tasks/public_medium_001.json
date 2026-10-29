@@ -1,0 +1,368 @@
+{
+  "id": "public_medium_001",
+  "source": "public",
+  "difficulty": "medium",
+  "title": "多泵轮换供水控制",
+  "pou": {
+    "type": "function_block",
+    "name": "MultiPump"
+  },
+  "requirement": {
+    "en": "A water-supply system has 5 pumps. mode selects manual (FALSE) or automatic (TRUE). In manual mode each pump's RunComd follows its selection. In automatic mode compare priorities and select the 3 highest-priority pumps (three in use, two on standby). start starts the selected pumps, stop stops all pumps.",
+    "zh": "供水系统有 5 台泵。mode 选择手动(FALSE)或自动(TRUE)。手动模式下每台泵的 RunComd 跟随其 selection；自动模式下比较优先级，按'三用二备'自动选出 3 台优先级更高的泵供水。start 启动所选泵，stop 停止所有泵。"
+  },
+  "interface": {
+    "duts": [
+      {
+        "name": "ST_Pump",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "priority",
+            "type": "INT",
+            "desc": "优先级，越大越高"
+          },
+          {
+            "name": "selection",
+            "type": "BOOL",
+            "desc": "手动选中状态"
+          },
+          {
+            "name": "RunComd",
+            "type": "BOOL",
+            "desc": "运行命令"
+          }
+        ]
+      }
+    ],
+    "inputs": [
+      {
+        "name": "mode",
+        "type": "BOOL",
+        "desc": "FALSE 手动 TRUE 自动"
+      },
+      {
+        "name": "start",
+        "type": "BOOL",
+        "desc": "启动所选泵"
+      },
+      {
+        "name": "stop",
+        "type": "BOOL",
+        "desc": "停止所有泵"
+      }
+    ],
+    "outputs": [],
+    "inouts": [
+      {
+        "name": "pumpGroup",
+        "type": "ARRAY[1..5] OF ST_Pump",
+        "desc": "5 台泵记录，读 priority/selection，写 RunComd"
+      }
+    ]
+  },
+  "ltl_specs": [
+    {
+      "id": "P1",
+      "description": "停止优先：stop 时所有泵停止。",
+      "formula": "G(stop -> !pumpGroup[1].RunComd)"
+    },
+    {
+      "id": "P2",
+      "description": "手动：选中的泵在 start 时运行。",
+      "formula": "G((!mode && !stop && start && pumpGroup[1].selection) -> pumpGroup[1].RunComd)"
+    },
+    {
+      "id": "P3",
+      "description": "手动：未选中的泵不运行。",
+      "formula": "G((!mode && !stop && start && !pumpGroup[1].selection) -> !pumpGroup[1].RunComd)"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC1",
+      "description": "手动模式选中泵运行",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "mode": false,
+            "start": false,
+            "stop": false,
+            "pumpGroup": [
+              {
+                "priority": 5,
+                "selection": true
+              },
+              {
+                "priority": 1,
+                "selection": false
+              },
+              {
+                "priority": 4,
+                "selection": true
+              },
+              {
+                "priority": 2,
+                "selection": false
+              },
+              {
+                "priority": 3,
+                "selection": false
+              }
+            ]
+          },
+          "expect": {
+            "pumpGroup": [
+              {
+                "RunComd": false
+              },
+              {
+                "RunComd": false
+              },
+              {
+                "RunComd": false
+              },
+              {
+                "RunComd": false
+              },
+              {
+                "RunComd": false
+              }
+            ]
+          }
+        },
+        {
+          "inputs": {
+            "mode": false,
+            "start": true,
+            "stop": false,
+            "pumpGroup": [
+              {
+                "priority": 5,
+                "selection": true
+              },
+              {
+                "priority": 1,
+                "selection": false
+              },
+              {
+                "priority": 4,
+                "selection": true
+              },
+              {
+                "priority": 2,
+                "selection": false
+              },
+              {
+                "priority": 3,
+                "selection": false
+              }
+            ]
+          },
+          "expect": {
+            "pumpGroup": [
+              {
+                "RunComd": true
+              },
+              {
+                "RunComd": false
+              },
+              {
+                "RunComd": true
+              },
+              {
+                "RunComd": false
+              },
+              {
+                "RunComd": false
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "自动模式选出 3 台最高优先级泵",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "mode": true,
+            "start": true,
+            "stop": false,
+            "pumpGroup": [
+              {
+                "priority": 5,
+                "selection": false
+              },
+              {
+                "priority": 1,
+                "selection": false
+              },
+              {
+                "priority": 4,
+                "selection": false
+              },
+              {
+                "priority": 2,
+                "selection": false
+              },
+              {
+                "priority": 3,
+                "selection": false
+              }
+            ]
+          },
+          "expect": {
+            "pumpGroup": [
+              {
+                "RunComd": true
+              },
+              {
+                "RunComd": false
+              },
+              {
+                "RunComd": true
+              },
+              {
+                "RunComd": false
+              },
+              {
+                "RunComd": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "TC3",
+      "description": "停止优先于启动",
+      "scan_ms": 10,
+      "steps": [
+        {
+          "inputs": {
+            "mode": true,
+            "start": true,
+            "stop": false,
+            "pumpGroup": [
+              {
+                "priority": 5,
+                "selection": false
+              },
+              {
+                "priority": 1,
+                "selection": false
+              },
+              {
+                "priority": 4,
+                "selection": false
+              },
+              {
+                "priority": 2,
+                "selection": false
+              },
+              {
+                "priority": 3,
+                "selection": false
+              }
+            ]
+          },
+          "expect": {
+            "pumpGroup": [
+              {
+                "RunComd": true
+              },
+              {
+                "RunComd": false
+              },
+              {
+                "RunComd": true
+              },
+              {
+                "RunComd": false
+              },
+              {
+                "RunComd": true
+              }
+            ]
+          }
+        },
+        {
+          "inputs": {
+            "mode": true,
+            "start": true,
+            "stop": true,
+            "pumpGroup": [
+              {
+                "priority": 5,
+                "selection": false
+              },
+              {
+                "priority": 1,
+                "selection": false
+              },
+              {
+                "priority": 4,
+                "selection": false
+              },
+              {
+                "priority": 2,
+                "selection": false
+              },
+              {
+                "priority": 3,
+                "selection": false
+              }
+            ]
+          },
+          "expect": {
+            "pumpGroup": [
+              {
+                "RunComd": false
+              },
+              {
+                "RunComd": false
+              },
+              {
+                "RunComd": false
+              },
+              {
+                "RunComd": false
+              },
+              {
+                "RunComd": false
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "reference": {
+    "auto_wire": false,
+    "duts": [
+      {
+        "name": "ST_Pump",
+        "kind": "struct",
+        "declaration": "TYPE ST_Pump :\nSTRUCT\n    priority : INT;\n    selection : BOOL;\n    RunComd : BOOL;\nEND_STRUCT\nEND_TYPE\n"
+      }
+    ],
+    "pous": [
+      {
+        "name": "MultiPump",
+        "kind": "function_block",
+        "declaration": "FUNCTION_BLOCK MultiPump\nVAR_INPUT\n    mode : BOOL;\n    start : BOOL;\n    stop : BOOL;\nEND_VAR\nVAR_IN_OUT\n    pumpGroup : ARRAY[1..5] OF ST_Pump;\nEND_VAR\nVAR\n    i : INT;\n    j : INT;\n    higher : INT;\nEND_VAR\n",
+        "implementation": "FOR i := 1 TO 5 DO\n    IF stop THEN\n        pumpGroup[i].RunComd := FALSE;\n    ELSIF start THEN\n        IF mode THEN\n            higher := 0;\n            FOR j := 1 TO 5 DO\n                IF pumpGroup[j].priority > pumpGroup[i].priority THEN\n                    higher := higher + 1;\n                END_IF\n            END_FOR\n            IF higher < 3 THEN\n                pumpGroup[i].RunComd := TRUE;\n            ELSE\n                pumpGroup[i].RunComd := FALSE;\n            END_IF\n        ELSE\n            pumpGroup[i].RunComd := pumpGroup[i].selection;\n        END_IF\n    END_IF\nEND_FOR\n"
+      },
+      {
+        "name": "PLC_PRG",
+        "kind": "program",
+        "declaration": "PROGRAM PLC_PRG\nVAR\n    fb : MultiPump;\n    pumps : ARRAY[1..5] OF ST_Pump;\nEND_VAR\n",
+        "implementation": "fb(mode := FALSE, start := FALSE, stop := FALSE, pumpGroup := pumps);\n"
+      }
+    ]
+  }
+}
