@@ -35,14 +35,20 @@
 ## 使用
 
 ```bash
+# 配置密钥：复制模板并填写（.env 不入库，.env.example 入库）
+cp .env.example .env        # Windows: copy .env.example .env
+python -m agent.llm         # 检查各模型密钥是否就绪（掩码显示）
+
 # 离线自测（回放 mock 输出）
 python -m agent.harness --task dataset/tasks/public_easy_003.json --mock
 
-# 真实模型（需设置密钥）
-export DEEPSEEK_API_KEY=...      # 或 DASHSCOPE_API_KEY
+# 真实模型（读取 .env 或环境变量）
 python -m agent.harness --task dataset/tasks/public_easy_003.json --model deepseek
 python -m agent.harness --task ... --model qwen --max-rounds 5 --out logs/x.json
 ```
+
+密钥优先级：进程环境变量 > `.env`（仓库根目录，可用 `AGENT_ENV_FILE` 指定其他路径）。
+`.env` 已在 `.gitignore` 中；`.env.example` 为提交的模板。
 
 模型配置（`AGENT_BASE_URL` / `AGENT_MODEL` / `AGENT_API_KEY` 可覆盖默认值）：
 

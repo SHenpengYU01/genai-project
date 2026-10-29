@@ -35,7 +35,43 @@ class LLMError(RuntimeError):
     pass
 
 
+_ENV_LOADED = False
+
+
+def load_env_file(path=None):
+    """Load KEY=VALUE lines from <repo>/.env (or $AGENT_ENV_FILE) once.
+
+    Existing environment variables win. .env is gitignored; .env.example is
+    the committed template.
+    """
+    global _ENV_LOADED
+    if _ENV_LOADED:
+        return
+    _ENV_LOADED = True
+    if path is None:
+        path = os.environ.get("AGENT_ENV_FILE")
+    if path is None:
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        path = os.path.join(root, ".env")
+    if not os.path.isfile(path):
+        return
+    try:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            for raw in f:
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, val = line.split("=", 1)
+                key = key.strip()
+                val = val.strip().strip('"').strip("'")
+                if key and val and key not in os.environ:
+                    os.environ[key] = val
+    except OSError:
+        pass
+
+
 def resolve_model(alias):
+    load_env_file()
     if alias not in DEFAULT_MODELS:
         raise LLMError("unknown model alias %r (known: %s)"
                        % (alias, ", ".join(DEFAULT_MODELS)))
@@ -141,3 +177,24 @@ class MockClient:
 
     def cost_usd(self):
         return 0.0
+
+
+def _mask(key):
+    if not key:
+        return "MISSING"
+    return "set(%s***)" % key[:4] if len(key) > 8 else "set(***)"
+
+
+def main():
+    """Print whether each model alias has a key configured (masked)."""
+    load_env_file()
+    for alias, cfg in DEFAULT_MODELS.items():
+        key = os.environ.get("AGENT_API_KEY") \
+            or os.environ.get(cfg["key_env"], "")
+        print("%-9s model=%-14s %s=%s"
+              % (alias, os.environ.get("AGENT_MODEL") or cfg["model"],
+                 cfg["key_env"], _mask(key)))
+
+
+if __name__ == "__main__":
+    main()

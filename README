@@ -22,6 +22,10 @@ CODESYS 仿真行为测试 → 结构化修复，并在 30 道 PLC 编程题上�
 ## 快速开始
 
 ```bash
+# 0) 配置模型密钥：复制模板并填写，.env 已被 .gitignore 忽略
+copy .env.example .env
+python -m agent.llm          # 检查密钥是否就绪（只显示掩码）
+
 # 1) 编译服务自检（7 个样例，含故意报错项）
 tool\run_tests.bat
 
