@@ -108,7 +108,16 @@ def main():
             model_names[alias.strip()] = name.strip()
 
     os.makedirs(os.path.join(args.outdir, "tasks"), exist_ok=True)
-    summary = {"runs": {}, "started": time.strftime("%Y-%m-%d %H:%M:%S")}
+    summary = {"runs": {}, "started": time.strftime("%Y-%m-%d %H:%M:%S"),
+               "config": {
+                   "models": models,
+                   "model_names": model_names,
+                   "mock": args.mock,
+                   "max_rounds": args.max_rounds,
+                   "use_tests": not args.no_tests,
+                   "tasks": [t["id"] for t in tasks],
+                   "task_count": len(tasks),
+               }}
     for model in models:
         records = []
         print("== model %s ==" % model, flush=True)
