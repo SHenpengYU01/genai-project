@@ -37,25 +37,32 @@
 ```bash
 # 配置密钥：复制模板并填写（.env 不入库，.env.example 入库）
 cp .env.example .env        # Windows: copy .env.example .env
-python -m agent.llm         # 检查各模型密钥是否就绪（掩码显示）
+python -m agent.llm         # 检查密钥/模型名是否就绪（掩码显示）
+python -m agent.llm --list qwen   # 有 key 后列出可用模型 id，避免模型名写错
 
 # 离线自测（回放 mock 输出）
 python -m agent.harness --task dataset/tasks/public_easy_003.json --mock
 
-# 真实模型（读取 .env 或环境变量）
+# 真实模型（走 DMXAPI）
 python -m agent.harness --task dataset/tasks/public_easy_003.json --model deepseek
-python -m agent.harness --task ... --model qwen --max-rounds 5 --out logs/x.json
+python -m agent.harness --task ... --model qwen --model-name qwen3-max
 ```
 
 密钥优先级：进程环境变量 > `.env`（仓库根目录，可用 `AGENT_ENV_FILE` 指定其他路径）。
 `.env` 已在 `.gitignore` 中；`.env.example` 为提交的模板。
 
-模型配置（`AGENT_BASE_URL` / `AGENT_MODEL` / `AGENT_API_KEY` 可覆盖默认值）：
+模型配置（端点：DMXAPI `https://www.dmxapi.cn/v1`，OpenAI 兼容）：
 
-| alias | 默认端点 | 默认模型 | 密钥环境变量 |
+| alias | 默认模型名（可覆盖） | 覆盖变量 | 密钥环境变量 |
 |---|---|---|---|
-| `deepseek` | https://api.deepseek.com/v1 | deepseek-chat | `DEEPSEEK_API_KEY` |
-| `qwen` | https://dashscope.aliyuncs.com/compatible-mode/v1 | qwen-plus | `DASHSCOPE_API_KEY` |
+| `deepseek` | `DeepSeek-V3.2` | `DMXAPI_MODEL_DEEPSEEK` | `DMXAPI_API_KEY` |
+| `qwen` | `qwen3-max` | `DMXAPI_MODEL_QWEN` | `DMXAPI_API_KEY` |
+
+- 准确模型名以 [DMXAPI 模型与价格页](https://www.dmxapi.cn/rmb) 为准；填到 `.env`
+  或命令行 `--model-name`（`run_eval.py --model-names deepseek=...,qwen=...`）。
+- 通用覆盖：`AGENT_BASE_URL` / `AGENT_MODEL` / `AGENT_API_KEY`（`AGENT_MODEL` 同时作用于所有 alias，一般只用于单模型调试）。
+- 成本估算默认关闭（DMXAPI 按人民币计价，价格以页面为准）；需要时在 `agent/llm.py`
+  的 `DEFAULT_MODELS` 中填写 `price_in` / `price_out`（每百万 token）。
 
 ## 实验
 

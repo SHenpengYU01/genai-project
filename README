@@ -22,9 +22,10 @@ CODESYS 仿真行为测试 → 结构化修复，并在 30 道 PLC 编程题上�
 ## 快速开始
 
 ```bash
-# 0) 配置模型密钥：复制模板并填写，.env 已被 .gitignore 忽略
+# 0) 配置模型密钥：复制模板并填写 DMXAPI_API_KEY（.env 已被 .gitignore 忽略）
 copy .env.example .env
-python -m agent.llm          # 检查密钥是否就绪（只显示掩码）
+python -m agent.llm          # 检查密钥/模型名是否就绪（只显示掩码）
+python -m agent.llm --list qwen   # 有 key 后列出可用模型 id
 
 # 1) 编译服务自检（7 个样例，含故意报错项）
 tool\run_tests.bat
@@ -39,8 +40,10 @@ python tester/run_all.py
 python experiments/build_mocks.py
 python experiments/run_eval.py --mock reference --limit 3 --outdir experiments/runs/mock_ref
 
-# 5) 正式实验（需 DEEPSEEK_API_KEY / DASHSCOPE_API_KEY）
-python experiments/run_eval.py --models deepseek,qwen --outdir experiments/runs/agent_2models
+# 5) 正式实验（DMXAPI：填好 .env 的 DMXAPI_API_KEY）
+python experiments/run_eval.py --models deepseek,qwen \
+    --model-names deepseek=DeepSeek-V3.2,qwen=qwen3-max \
+    --outdir experiments/runs/agent_2models
 ```
 
 ## 实验指标

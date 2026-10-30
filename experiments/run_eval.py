@@ -52,6 +52,8 @@ def aggregate(records):
     status = {}
     for r in records:
         status[r["status"]] = status.get(r["status"], 0) + 1
+    costs = [r["cost_usd"] for r in records
+             if r.get("cost_usd") is not None]
     return {
         "n_tasks": n,
         "compile_first_try_rate": rate(lambda r: bool(r.get("compiled_first_try"))),
@@ -64,7 +66,8 @@ def aggregate(records):
         "avg_wall_s": round(sum(r["wall_ms"] for r in records) / n / 1000.0, 1),
         "tokens_in": sum(r["usage_total"]["prompt_tokens"] for r in records),
         "tokens_out": sum(r["usage_total"]["completion_tokens"] for r in records),
-        "cost_usd": round(sum(r["cost_usd"] for r in records), 4),
+        "cost": (round(sum(costs), 4) if costs else None),
+        "cost_unit": "provider billing currency (未配置价格时为 null)",
     }
 
 
@@ -79,6 +82,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--models", default="deepseek",
                     help="comma-separated aliases (deepseek,qwen)")
+    ap.add_argument("--model-names", default="",
+                    help="exact provider model ids per alias, e.g. "
+                         "deepseek=DeepSeek-V3.2,qwen=qwen3-max")
     ap.add_argument("--mock", default=None,
                     help="replay scripted outputs from mocks/<variant>/ "
                          "(reference | broken_once | test_fail_once | ...)")
@@ -95,6 +101,11 @@ def main():
         raise SystemExit("no tasks selected")
     models = ["mock-%s" % args.mock] if args.mock else \
         [m.strip() for m in args.models.split(",") if m.strip()]
+    model_names = {}
+    for part in args.model_names.split(","):
+        if "=" in part:
+            alias, _, name = part.partition("=")
+            model_names[alias.strip()] = name.strip()
 
     os.makedirs(os.path.join(args.outdir, "tasks"), exist_ok=True)
     summary = {"runs": {}, "started": time.strftime("%Y-%m-%d %H:%M:%S")}
@@ -105,7 +116,8 @@ def main():
             if args.mock:
                 llm = MockClient(mock_responses(task, args.mock))
             else:
-                llm = OpenAICompatClient(model)
+                llm = OpenAICompatClient(
+                    model, model_name=model_names.get(model))
             h = Harness(task, llm, max_rounds=args.max_rounds,
                         use_tests=not args.no_tests)
             t0 = time.time()
@@ -122,6 +134,7 @@ def main():
                      "" if not rec.get("error") else "  ERR:" + rec["error"][:80]),
                   flush=True)
         summary["runs"][model] = {
+            "model_name": model_names.get(model),
             "overall": aggregate(records),
             "by_difficulty": by_group(records, "difficulty",
                                       lambda r: r.get("difficulty") or "?"),
@@ -133,13 +146,14 @@ def main():
     print("\n== summary ==")
     for model, s in summary["runs"].items():
         o = s["overall"]
-        print("%s: n=%d first_compile=%.2f final_compile=%.2f "
-              "tests_pass=%s success=%.2f avg_rounds=%.2f cost=$%.4f"
-              % (model, o["n_tasks"], o["compile_first_try_rate"],
-                 o["compile_final_rate"],
+        print("%s (%s): n=%d first_compile=%.2f final_compile=%.2f "
+              "tests_pass=%s success=%.2f avg_rounds=%.2f cost=%s"
+              % (model, s.get("model_name") or "-", o["n_tasks"],
+                 o["compile_first_try_rate"], o["compile_final_rate"],
                  "-" if o["tests_all_pass_rate"] is None
                  else "%.2f" % o["tests_all_pass_rate"],
-                 o["success_rate"], o["avg_rounds"], o["cost_usd"]))
+                 o["success_rate"], o["avg_rounds"],
+                 "n/a" if o["cost"] is None else "%.4f" % o["cost"]))
     print("written -> %s" % os.path.join(args.outdir, "summary.json"))
 
 

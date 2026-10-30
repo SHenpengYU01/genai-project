@@ -236,7 +236,8 @@ class Harness:
         record["rounds_used"] = len(record["rounds"])
         record["wall_ms"] = int((time.time() - t0) * 1000)
         record["usage_total"] = dict(self.llm.total_usage)
-        record["cost_usd"] = round(self.llm.cost_usd(), 6)
+        cost = self.llm.cost_usd()
+        record["cost_usd"] = None if cost is None else round(cost, 6)
         if final_pous is not None:
             record["final_code"] = final_pous
             record["final_duts"] = final_duts
@@ -257,13 +258,16 @@ def _mock_responses(task_path):
 def make_llm(args, task_path):
     if args.mock:
         return MockClient(_mock_responses(task_path))
-    return OpenAICompatClient(args.model)
+    return OpenAICompatClient(args.model, model_name=args.model_name)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--task", required=True)
     ap.add_argument("--model", default="deepseek")
+    ap.add_argument("--model-name", default=None,
+                    help="exact provider model id (e.g. DeepSeek-V3.2); "
+                         "default from DMXAPI_MODEL_<ALIAS> or built-in")
     ap.add_argument("--mock", action="store_true",
                     help="replay experiments/mocks/reference responses")
     ap.add_argument("--max-rounds", type=int, default=5)

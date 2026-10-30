@@ -1,8 +1,11 @@
 """OpenAI-compatible LLM client used by the agent harness (stdlib only).
 
-Model aliases map to provider defaults; any field can be overridden via env:
-  AGENT_BASE_URL, AGENT_MODEL, AGENT_API_KEY
-Provider keys default to DEEPSEEK_API_KEY / DASHSCOPE_API_KEY.
+Provider: DMXAPI (https://www.dmxapi.cn), one key for DeepSeek/Qwen/etc.
+Model names differ per provider page — list them with
+``python -m agent.llm --list`` once the key is configured, and override
+defaults via DMXAPI_MODEL_DEEPSEEK / DMXAPI_MODEL_QWEN in .env.
+
+Env overrides: AGENT_BASE_URL, AGENT_MODEL, AGENT_API_KEY, DMXAPI_API_KEY.
 """
 from __future__ import annotations
 
@@ -12,21 +15,26 @@ import time
 import urllib.error
 import urllib.request
 
-# price_* are USD per 1M tokens, rough public list prices; override per run.
+DMX_BASE = "https://www.dmxapi.cn/v1"
+
+# price_* are optional (same currency as the provider; DMXAPI bills in RMB).
+# Fill them from https://www.dmxapi.cn/rmb to enable cost estimates.
 DEFAULT_MODELS = {
     "deepseek": {
-        "base_url": "https://api.deepseek.com/v1",
-        "model": "deepseek-chat",
-        "key_env": "DEEPSEEK_API_KEY",
-        "price_in": 0.27,
-        "price_out": 1.10,
+        "base_url": DMX_BASE,
+        "model": "DeepSeek-V3.2",
+        "key_env": "DMXAPI_API_KEY",
+        "model_env": "DMXAPI_MODEL_DEEPSEEK",
+        "price_in": None,
+        "price_out": None,
     },
     "qwen": {
-        "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "model": "qwen-plus",
-        "key_env": "DASHSCOPE_API_KEY",
-        "price_in": 0.40,
-        "price_out": 1.20,
+        "base_url": DMX_BASE,
+        "model": "qwen3-max",
+        "key_env": "DMXAPI_API_KEY",
+        "model_env": "DMXAPI_MODEL_QWEN",
+        "price_in": None,
+        "price_out": None,
     },
 }
 
@@ -70,24 +78,40 @@ def load_env_file(path=None):
         pass
 
 
-def resolve_model(alias):
+def resolve_model(alias, model_name=None):
     load_env_file()
     if alias not in DEFAULT_MODELS:
         raise LLMError("unknown model alias %r (known: %s)"
                        % (alias, ", ".join(DEFAULT_MODELS)))
     cfg = dict(DEFAULT_MODELS[alias])
     cfg["base_url"] = os.environ.get("AGENT_BASE_URL") or cfg["base_url"]
-    cfg["model"] = os.environ.get("AGENT_MODEL") or cfg["model"]
-    cfg["api_key"] = os.environ.get("AGENT_API_KEY") \
-        or os.environ.get(cfg["key_env"], "")
+    cfg["model"] = (model_name
+                    or os.environ.get("AGENT_MODEL")
+                    or os.environ.get(cfg["model_env"], "")
+                    or cfg["model"])
+    cfg["api_key"] = (os.environ.get("AGENT_API_KEY")
+                      or os.environ.get(cfg["key_env"], ""))
     cfg["alias"] = alias
     return cfg
 
 
+def list_models(alias="deepseek", timeout=60.0):
+    """GET {base}/models and return the ids (needs a configured key)."""
+    cfg = resolve_model(alias)
+    if not cfg["api_key"]:
+        raise LLMError("no API key: set %s in .env" % cfg["key_env"])
+    url = cfg["base_url"].rstrip("/") + "/models"
+    req = urllib.request.Request(
+        url, headers={"Authorization": "Bearer " + cfg["api_key"]})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        payload = json.loads(r.read().decode("utf-8"))
+    return [m.get("id") for m in payload.get("data", []) if m.get("id")]
+
+
 class OpenAICompatClient:
-    def __init__(self, alias, temperature=0.1, max_tokens=4096,
-                 timeout=240.0, retries=3):
-        self.cfg = resolve_model(alias)
+    def __init__(self, alias, model_name=None, temperature=0.1,
+                 max_tokens=4096, timeout=240.0, retries=3):
+        self.cfg = resolve_model(alias, model_name)
         if not self.cfg["api_key"]:
             raise LLMError("no API key: set %s (or AGENT_API_KEY)"
                            % self.cfg["key_env"])
@@ -150,6 +174,8 @@ class OpenAICompatClient:
 
     def cost_usd(self):
         c = self.cfg
+        if c.get("price_in") is None or c.get("price_out") is None:
+            return None
         return (self.total_usage["prompt_tokens"] * c["price_in"]
                 + self.total_usage["completion_tokens"] * c["price_out"]) / 1e6
 
@@ -185,16 +211,44 @@ def _mask(key):
     return "set(%s***)" % key[:4] if len(key) > 8 else "set(***)"
 
 
-def main():
-    """Print whether each model alias has a key configured (masked)."""
+def main(argv=None):
+    """Show key readiness (masked) or list provider models.
+
+    python -m agent.llm              # readiness per alias
+    python -m agent.llm --list       # all model ids from /v1/models
+    python -m agent.llm --list qwen  # filter by substring
+    """
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--list", dest="list_filter", nargs="?", const="",
+                    default=None)
+    ap.add_argument("--alias", default="deepseek")
+    args = ap.parse_args(argv)
     load_env_file()
+
+    if args.list_filter is not None:
+        try:
+            ids = list_models(args.alias)
+        except Exception as e:
+            print("ERROR: %s" % e)
+            return 2
+        flt = args.list_filter.lower()
+        hits = sorted(i for i in ids if flt in i.lower()) or sorted(ids)
+        print("models matching %r (%d of %d):"
+              % (args.list_filter or "", len(hits), len(ids)))
+        for i in hits:
+            print("  " + i)
+        return 0
+
     for alias, cfg in DEFAULT_MODELS.items():
         key = os.environ.get("AGENT_API_KEY") \
             or os.environ.get(cfg["key_env"], "")
-        print("%-9s model=%-14s %s=%s"
-              % (alias, os.environ.get("AGENT_MODEL") or cfg["model"],
-                 cfg["key_env"], _mask(key)))
+        model = os.environ.get(cfg["model_env"], "") or cfg["model"]
+        print("%-9s model=%-22s %s=%s  base=%s"
+              % (alias, model, cfg["key_env"], _mask(key),
+                 os.environ.get("AGENT_BASE_URL") or cfg["base_url"]))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
