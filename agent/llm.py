@@ -110,7 +110,9 @@ def list_models(alias="deepseek", timeout=60.0):
 
 class OpenAICompatClient:
     def __init__(self, alias, model_name=None, temperature=0.1,
-                 max_tokens=4096, timeout=240.0, retries=3):
+                 max_tokens=None, timeout=240.0, retries=3):
+        if max_tokens is None:
+            max_tokens = int(os.environ.get("AGENT_MAX_TOKENS", "16384"))
         self.cfg = resolve_model(alias, model_name)
         if not self.cfg["api_key"]:
             raise LLMError("no API key: set %s (or AGENT_API_KEY)"
@@ -141,10 +143,12 @@ class OpenAICompatClient:
             try:
                 with urllib.request.urlopen(req, timeout=self.timeout) as r:
                     payload = json.loads(r.read().decode("utf-8"))
-                text = payload["choices"][0]["message"]["content"] or ""
+                choice = payload["choices"][0]
+                text = choice["message"]["content"] or ""
                 usage = payload.get("usage") or {}
                 out = {
                     "text": text,
+                    "finish_reason": choice.get("finish_reason"),
                     "usage": {
                         "prompt_tokens": int(usage.get("prompt_tokens", 0)),
                         "completion_tokens": int(
@@ -198,6 +202,7 @@ class MockClient:
             text = self.responses[self.i]
             self.i += 1
         return {"text": text,
+                "finish_reason": "stop",
                 "usage": {"prompt_tokens": 0, "completion_tokens": 0},
                 "elapsed_ms": 0, "model": self.name}
 

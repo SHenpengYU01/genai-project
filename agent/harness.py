@@ -125,7 +125,8 @@ class Harness:
 
             text = resp["text"]
             rec = {"round": rnd, "usage": resp["usage"],
-                   "llm_ms": resp["elapsed_ms"]}
+                   "finish_reason": resp.get("finish_reason"),
+                   "llm_ms": resp.get("elapsed_ms", 0)}
             record["rounds"].append(rec)
 
             parsed = parser.parse(text)
@@ -142,6 +143,9 @@ class Harness:
                 feedback = ("输出格式错误：\n- "
                             + "\n- ".join(parsed["errors"])
                             + "\n\n请按块格式重新输出完整代码。")
+                if resp.get("finish_reason") == "length":
+                    feedback += ("\n注意：本次输出因长度限制被截断，"
+                                 "请精简实现并确保每个块以 <<<END>>> 结束。")
                 sig = ("parse", tuple(parsed["errors"]))
             else:
                 iface_errs = parser.check_interface(self.task, pous)

@@ -61,6 +61,8 @@ python -m agent.harness --task ... --model qwen --model-name qwen3-max
 - 准确模型名以 [DMXAPI 模型与价格页](https://www.dmxapi.cn/rmb) 为准；填到 `.env`
   或命令行 `--model-name`（`run_eval.py --model-names deepseek=...,qwen=...`）。
 - 通用覆盖：`AGENT_BASE_URL` / `AGENT_MODEL` / `AGENT_API_KEY`（`AGENT_MODEL` 同时作用于所有 alias，一般只用于单模型调试）。
+- 输出长度上限：默认 `AGENT_MAX_TOKENS=16384`；若模型输出被截断（记录的 `finish_reason=length`），
+  harness 会在反馈中提示精简，并计入一次修复轮次。
 - 成本估算默认关闭（DMXAPI 按人民币计价，价格以页面为准）；需要时在 `agent/llm.py`
   的 `DEFAULT_MODELS` 中填写 `price_in` / `price_out`（每百万 token）。
 

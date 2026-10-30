@@ -24,6 +24,74 @@ _IMPL = re.compile(r"^\s*<<<\s*IMPL\s*>>>\s*$", re.I)
 _END = re.compile(r"^\s*<<<\s*END\s*>>>\s*$", re.I)
 
 
+_TYPE_RE = re.compile(
+    r"\bTYPE\s+([A-Za-z_]\w*)\s*:(.*?)\bEND_TYPE\b", re.I | re.S)
+_HEADER = re.compile(
+    r"^\s*(FUNCTION_BLOCK|PROGRAM|FUNCTION)\s+([A-Za-z_]\w*)", re.I)
+_VAR_OPEN = re.compile(
+    r"^VAR(_INPUT|_OUTPUT|_IN_OUT|_PERSISTENT|_CONSTANT|_GLOBAL|_ACCESS)?\b",
+    re.I)
+
+
+def _strip_fences(text):
+    return "\n".join(ln for ln in text.splitlines()
+                     if not ln.strip().startswith("```"))
+
+
+def _fallback_parse(text):
+    """Parse plain ST (no <<<>>> markers): TYPE blocks + the first POU.
+
+    Declaration is taken through the last leading END_VAR; the remainder is
+    the implementation body. Used when the model ignores the block format.
+    """
+    clean = _strip_fences(text)
+    duts = []
+    for m in _TYPE_RE.finditer(clean):
+        body = m.group(2)
+        kind = "struct" if re.search(r"\bSTRUCT\b", body, re.I) else "struct"
+        decl = ("TYPE %s :%s END_TYPE" % (m.group(1), body)).strip()
+        duts.append({"name": m.group(1), "kind": kind,
+                     "declaration": decl + "\n"})
+
+    pous = []
+    lines = clean.splitlines()
+    for i, ln in enumerate(lines):
+        m = _HEADER.match(ln)
+        if not m:
+            continue
+        kind = {"function_block": "function_block", "program": "program",
+                "function": "function"}[m.group(1).lower()]
+        name = m.group(2)
+        last_end = i
+        impl_start = None
+        in_var = False
+        j = i + 1
+        while j < len(lines):
+            s = lines[j].strip()
+            if _VAR_OPEN.match(s):
+                in_var = True
+            elif re.match(r"^END_VAR\b", s, re.I):
+                in_var = False
+                last_end = j
+            elif in_var:
+                pass
+            elif not s or s.startswith("(*") or s.startswith("//"):
+                pass
+            else:
+                impl_start = j
+                break
+            j += 1
+        if impl_start is None:
+            impl_start = j
+        decl = "\n".join(lines[i:last_end + 1]).strip() + "\n"
+        impl = "\n".join(lines[impl_start:]).strip()
+        pous.append({"name": name, "kind": kind,
+                     "declaration": decl,
+                     "implementation": (impl + "\n") if impl else ""})
+        break
+    return {"duts": duts, "pous": pous, "errors": []}
+
+
 def parse(text):
     """Return {"duts": [...], "pous": [...], "errors": [str, ...]}."""
     duts, pous, errors = [], [], []
@@ -66,7 +134,11 @@ def parse(text):
             pous.append({"name": name, "kind": kind,
                          "declaration": decl + "\n",
                          "implementation": (impl + "\n") if impl else ""})
-    if not pous:
+    if not pous and not duts and not errors:
+        fb = _fallback_parse(text)
+        if fb["pous"] or fb["duts"]:
+            return fb
+    if not pous and not duts:
         errors.append("未找到任何 POU 块（输出格式不符合要求）")
     return {"duts": duts, "pous": pous, "errors": errors}
 
