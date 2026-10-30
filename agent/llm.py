@@ -22,7 +22,7 @@ DMX_BASE = "https://www.dmxapi.cn/v1"
 DEFAULT_MODELS = {
     "deepseek": {
         "base_url": DMX_BASE,
-        "model": "DeepSeek-V3.2",
+        "model": "deepseek-v4.1-flash",
         "key_env": "DMXAPI_API_KEY",
         "model_env": "DMXAPI_MODEL_DEEPSEEK",
         "price_in": None,
@@ -30,7 +30,7 @@ DEFAULT_MODELS = {
     },
     "qwen": {
         "base_url": DMX_BASE,
-        "model": "qwen3-max",
+        "model": "qwen3.7-flash",
         "key_env": "DMXAPI_API_KEY",
         "model_env": "DMXAPI_MODEL_QWEN",
         "price_in": None,

@@ -42,7 +42,7 @@ python experiments/run_eval.py --mock reference --limit 3 --outdir experiments/r
 
 # 5) 正式实验（DMXAPI：填好 .env 的 DMXAPI_API_KEY）
 python experiments/run_eval.py --models deepseek,qwen \
-    --model-names deepseek=DeepSeek-V3.2,qwen=qwen3-max \
+    --model-names deepseek=deepseek-v4.1-flash,qwen=qwen3.7-flash \
     --outdir experiments/runs/agent_2models
 ```
 

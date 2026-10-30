@@ -55,8 +55,8 @@ python -m agent.harness --task ... --model qwen --model-name qwen3-max
 
 | alias | 默认模型名（可覆盖） | 覆盖变量 | 密钥环境变量 |
 |---|---|---|---|
-| `deepseek` | `DeepSeek-V3.2` | `DMXAPI_MODEL_DEEPSEEK` | `DMXAPI_API_KEY` |
-| `qwen` | `qwen3-max` | `DMXAPI_MODEL_QWEN` | `DMXAPI_API_KEY` |
+| `deepseek` | `deepseek-v4.1-flash` | `DMXAPI_MODEL_DEEPSEEK` | `DMXAPI_API_KEY` |
+| `qwen` | `qwen3.7-flash` | `DMXAPI_MODEL_QWEN` | `DMXAPI_API_KEY` |
 
 - 准确模型名以 [DMXAPI 模型与价格页](https://www.dmxapi.cn/rmb) 为准；填到 `.env`
   或命令行 `--model-name`（`run_eval.py --model-names deepseek=...,qwen=...`）。
