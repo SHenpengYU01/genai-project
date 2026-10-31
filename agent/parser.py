@@ -183,6 +183,23 @@ def interface_sections(declaration):
     return secs
 
 
+def check_names(pous, duts):
+    """Structural errors: duplicate POU names or POU/DUT name collisions."""
+    errors = []
+    seen = set()
+    for p in pous:
+        key = p["name"].lower()
+        if key in seen:
+            errors.append("POU 名重复：'%s'" % p["name"])
+        seen.add(key)
+    dut_names = {d["name"].lower() for d in duts}
+    for p in pous:
+        if p["name"].lower() in dut_names:
+            errors.append("POU '%s' 与同名的 DUT 冲突，请改用不同的名称"
+                          % p["name"])
+    return errors
+
+
 def check_interface(task, pous):
     """Return list of human-readable interface errors (empty = OK)."""
     errors = []

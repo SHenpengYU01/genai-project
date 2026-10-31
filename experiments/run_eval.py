@@ -157,8 +157,12 @@ def main():
                      time.time() - t0,
                      "" if not rec.get("error") else "  ERR:" + rec["error"][:80]),
                   flush=True)
+        name = model_names.get(model)
+        if not name and records:
+            nm = records[0].get("model") or ""
+            name = nm.split("/", 1)[1] if "/" in nm else None
         summary["runs"][model] = {
-            "model_name": model_names.get(model),
+            "model_name": name,
             "overall": aggregate(records),
             "by_difficulty": by_group(records, "difficulty",
                                       lambda r: r.get("difficulty") or "?"),

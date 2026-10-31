@@ -126,7 +126,8 @@ class Harness:
             text = resp["text"]
             rec = {"round": rnd, "usage": resp["usage"],
                    "finish_reason": resp.get("finish_reason"),
-                   "llm_ms": resp.get("elapsed_ms", 0)}
+                   "llm_ms": resp.get("elapsed_ms", 0),
+                   "raw_text": (text or "")[:8000]}
             record["rounds"].append(rec)
 
             parsed = parser.parse(text)
@@ -148,7 +149,8 @@ class Harness:
                                  "请精简实现并确保每个块以 <<<END>>> 结束。")
                 sig = ("parse", tuple(parsed["errors"]))
             else:
-                iface_errs = parser.check_interface(self.task, pous)
+                name_errs = parser.check_names(pous, duts)
+                iface_errs = name_errs or parser.check_interface(self.task, pous)
                 if iface_errs:
                     rec["interface_errors"] = iface_errs
                     feedback = prompt.interface_feedback(iface_errs)
