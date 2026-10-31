@@ -92,6 +92,8 @@ def main():
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--max-rounds", type=int, default=5)
     ap.add_argument("--no-tests", action="store_true")
+    ap.add_argument("--resume", action="store_true",
+                    help="reuse existing per-task records (skip tool_error runs)")
     ap.add_argument("--outdir", required=True)
     args = ap.parse_args()
 
@@ -115,6 +117,7 @@ def main():
                    "mock": args.mock,
                    "max_rounds": args.max_rounds,
                    "use_tests": not args.no_tests,
+                   "resume": args.resume,
                    "tasks": [t["id"] for t in tasks],
                    "task_count": len(tasks),
                }}
@@ -122,6 +125,21 @@ def main():
         records = []
         print("== model %s ==" % model, flush=True)
         for task in tasks:
+            fn = os.path.join(args.outdir, "tasks",
+                              "%s__%s.json" % (model.replace("/", "_"),
+                                               task["id"]))
+            if args.resume and os.path.isfile(fn):
+                try:
+                    with open(fn, encoding="utf-8") as f:
+                        rec = json.load(f)
+                    if rec.get("status") != "tool_error":
+                        records.append(rec)
+                        print("  [%-11s] %-22s rounds=%d (resumed)"
+                              % (rec["status"], task["id"],
+                                 rec["rounds_used"]), flush=True)
+                        continue
+                except Exception:
+                    pass
             if args.mock:
                 llm = MockClient(mock_responses(task, args.mock))
             else:
@@ -132,9 +150,6 @@ def main():
             t0 = time.time()
             rec = h.run()
             records.append(rec)
-            fn = os.path.join(args.outdir, "tasks",
-                              "%s__%s.json" % (model.replace("/", "_"),
-                                               task["id"]))
             with open(fn, "w", encoding="utf-8") as f:
                 json.dump(rec, f, ensure_ascii=False, indent=1)
             print("  [%-11s] %-22s rounds=%d wall=%.0fs%s"
