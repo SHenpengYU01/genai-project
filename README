@@ -55,6 +55,21 @@ python experiments/run_eval.py --framework codex --models deepseek,qwen \
 python experiments/summarize.py experiments/runs/agent_2models
 ```
 
+## 交付物索引
+
+| 作业要求 | 位置 |
+|---|---|
+| 数据集（公共 20 + 自建 10）与 schema | `dataset/tasks/`、`dataset/schema.md`、`dataset/build_*.py` |
+| 来源/改编/合理性/多样性说明 | 报告 §2.2–2.4；自建题 `meta.scenario` |
+| 逐题 LTL 规约（75 条） | `dataset/tasks/*.json` 的 `ltl_specs`；报告附录 A |
+| 逐题测试用例（54 组 / 199 步） | `dataset/tasks/*.json` 的 `test_cases`；执行器 `tester/` |
+| 自研 Agent harness | `agent/`（见 `agent/README.md`） |
+| CODESYS 编译集成 | `tool/`（见 `tool/README.md`） |
+| 自动行为测试（加分项） | `tester/`（CODESYS 仿真 + 自测驱动） |
+| 现有框架基线 | `baseline/`（Codex CLI，见其 README） |
+| 四设置实验结果 | `experiments/RESULTS_FULL.md`、`experiments/results.csv` |
+| 实验报告 | `report/实验报告.md` |
+
 ## 实验报告
 
 - [实验报告（含逐题 LTL 规约与四设置结果分析）](report/实验报告.md)
