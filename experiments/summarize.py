@@ -12,8 +12,11 @@ def load(outdir):
     runs = {}
     for f in sorted(glob.glob(os.path.join(outdir, "tasks", "*.json"))):
         r = json.load(open(f, encoding="utf-8"))
-        model = r["model"].split("/", 1)[0]
-        runs.setdefault(model, []).append(r)
+        fw = r.get("framework") or "agent"
+        mn = r.get("model_name")
+        if not mn:
+            mn = r["model"].split("/", 1)[1] if "/" in r["model"] else r["model"]
+        runs.setdefault("%s:%s" % (fw, mn), []).append(r)
     return runs
 
 
@@ -61,9 +64,8 @@ def _main(outdir, w):
         n = len(recs)
         def rate(p):
             return sum(1 for r in recs if p(r)) / n
-        name = recs[0]["model"].split("/", 1)[1] if "/" in recs[0]["model"] else "-"
-        print("| %s (%s) | %d | %s | %s | %s | %s | %.2f | %.0f | %d | %d |"
-              % (model, name, n,
+        print("| %s | %d | %s | %s | %s | %s | %.2f | %.0f | %d | %d |"
+              % (model, n,
                  pct(rate(lambda r: r.get("compiled_first_try"))),
                  pct(rate(lambda r: r.get("compiled"))),
                  pct(rate(lambda r: r.get("tests_passed") is True)),

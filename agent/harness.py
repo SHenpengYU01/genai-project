@@ -24,7 +24,8 @@ sys.path.insert(0, ROOT)
 from codesys_build import compile_jobs, CompileToolError  # noqa: E402
 from tester import run as tester_run  # noqa: E402
 from agent import caller_gen, parser, prompt  # noqa: E402
-from agent.llm import LLMError, MockClient, OpenAICompatClient  # noqa: E402
+from agent.llm import (LLMError, MockClient, OpenAICompatClient,  # noqa: E402
+                       resolve_model)
 
 
 def _fmt_val(v):
@@ -98,6 +99,8 @@ class Harness:
             "task": self.task["id"],
             "difficulty": self.task.get("difficulty"),
             "model": self.llm.name,
+            "framework": getattr(self.llm, "framework", "agent"),
+            "model_name": getattr(self.llm, "model_name", None),
             "use_tests": self.use_tests,
             "rounds": [],
             "status": None,
@@ -264,6 +267,10 @@ def _mock_responses(task_path):
 def make_llm(args, task_path):
     if args.mock:
         return MockClient(_mock_responses(task_path))
+    if getattr(args, "framework", "agent") == "codex":
+        from baseline.codex_client import CodexClient
+        mid = args.model_name or resolve_model(args.model)["model"]
+        return CodexClient(mid)
     return OpenAICompatClient(args.model, model_name=args.model_name)
 
 
@@ -271,6 +278,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--task", required=True)
     ap.add_argument("--model", default="deepseek")
+    ap.add_argument("--framework", default="agent",
+                    choices=("agent", "codex"),
+                    help="agent = self harness; codex = Codex CLI baseline")
     ap.add_argument("--model-name", default=None,
                     help="exact provider model id (e.g. DeepSeek-V3.2); "
                          "default from DMXAPI_MODEL_<ALIAS> or built-in")

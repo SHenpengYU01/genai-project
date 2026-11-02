@@ -122,6 +122,8 @@ class OpenAICompatClient:
         self.timeout = timeout
         self.retries = retries
         self.name = "%s/%s" % (alias, self.cfg["model"])
+        self.framework = "agent"
+        self.model_name = self.cfg["model"]
         self.total_usage = {"prompt_tokens": 0, "completion_tokens": 0}
 
     def chat(self, messages):
@@ -191,6 +193,8 @@ class MockClient:
         self.responses = list(responses)
         self.i = 0
         self.name = name
+        self.framework = "mock"
+        self.model_name = name
         self.total_usage = {"prompt_tokens": 0, "completion_tokens": 0}
         self.calls = []
 

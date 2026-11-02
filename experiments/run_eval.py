@@ -18,7 +18,8 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 
 from agent.harness import Harness  # noqa: E402
-from agent.llm import MockClient, OpenAICompatClient  # noqa: E402
+from agent.llm import MockClient, OpenAICompatClient, resolve_model  # noqa: E402
+from baseline.codex_client import CodexClient  # noqa: E402
 
 TASKS_DIR = os.path.join(ROOT, "dataset", "tasks")
 
@@ -82,6 +83,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--models", default="deepseek",
                     help="comma-separated aliases (deepseek,qwen)")
+    ap.add_argument("--framework", default="agent", choices=("agent", "codex"),
+                    help="generation framework: self harness or Codex CLI")
     ap.add_argument("--model-names", default="",
                     help="exact provider model ids per alias, e.g. "
                          "deepseek=DeepSeek-V3.2,qwen=qwen3-max")
@@ -112,6 +115,7 @@ def main():
     os.makedirs(os.path.join(args.outdir, "tasks"), exist_ok=True)
     summary = {"runs": {}, "started": time.strftime("%Y-%m-%d %H:%M:%S"),
                "config": {
+                   "framework": args.framework,
                    "models": models,
                    "model_names": model_names,
                    "mock": args.mock,
@@ -122,11 +126,12 @@ def main():
                    "task_count": len(tasks),
                }}
     for model in models:
+        label = model if args.framework == "agent" else "codex-" + model
         records = []
-        print("== model %s ==" % model, flush=True)
+        print("== %s ==" % label, flush=True)
         for task in tasks:
             fn = os.path.join(args.outdir, "tasks",
-                              "%s__%s.json" % (model.replace("/", "_"),
+                              "%s__%s.json" % (label.replace("/", "_"),
                                                task["id"]))
             if args.resume and os.path.isfile(fn):
                 try:
@@ -143,8 +148,11 @@ def main():
             if args.mock:
                 llm = MockClient(mock_responses(task, args.mock))
             else:
-                llm = OpenAICompatClient(
-                    model, model_name=model_names.get(model))
+                mid = model_names.get(model) or resolve_model(model)["model"]
+                if args.framework == "codex":
+                    llm = CodexClient(mid)
+                else:
+                    llm = OpenAICompatClient(model, model_name=mid)
             h = Harness(task, llm, max_rounds=args.max_rounds,
                         use_tests=not args.no_tests)
             t0 = time.time()
@@ -159,9 +167,8 @@ def main():
                   flush=True)
         name = model_names.get(model)
         if not name and records:
-            nm = records[0].get("model") or ""
-            name = nm.split("/", 1)[1] if "/" in nm else None
-        summary["runs"][model] = {
+            name = records[0].get("model_name")
+        summary["runs"][label] = {
             "model_name": name,
             "overall": aggregate(records),
             "by_difficulty": by_group(records, "difficulty",
