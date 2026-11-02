@@ -152,7 +152,8 @@ class Harness:
                                  "请精简实现并确保每个块以 <<<END>>> 结束。")
                 sig = ("parse", tuple(parsed["errors"]))
             else:
-                name_errs = parser.check_names(pous, duts)
+                name_errs = (parser.check_duts(duts)
+                             + parser.check_names(pous, duts))
                 iface_errs = name_errs or parser.check_interface(self.task, pous)
                 if iface_errs:
                     rec["interface_errors"] = iface_errs

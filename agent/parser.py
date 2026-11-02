@@ -183,6 +183,31 @@ def interface_sections(declaration):
     return secs
 
 
+VALID_DUT_KINDS = {"struct", "structure", "enum", "enumeration",
+                   "alias", "union"}
+
+_BUILTIN_TYPES = {
+    "BOOL", "BIT", "BYTE", "WORD", "DWORD", "LWORD", "SINT", "USINT", "INT",
+    "UINT", "DINT", "UDINT", "LINT", "ULINT", "REAL", "LREAL", "TIME",
+    "LTIME", "DATE", "TOD", "DT", "STRING", "WSTRING", "CHAR", "WCHAR",
+    "POINTER", "ARRAY", "VARIANT", "ANY",
+}
+
+
+def check_duts(duts):
+    """Reject invalid DUT kinds and names that collide with built-in types."""
+    errors = []
+    for d in duts:
+        kind = (d.get("kind") or "").strip().lower()
+        if kind not in VALID_DUT_KINDS:
+            errors.append("DUT '%s' 的 kind '%s' 无效（应为 struct/enum/alias/union）"
+                          % (d["name"], d.get("kind")))
+        if d["name"].upper() in _BUILTIN_TYPES:
+            errors.append("DUT 名 '%s' 与内置类型冲突，请另起名称"
+                          % d["name"])
+    return errors
+
+
 def check_names(pous, duts):
     """Structural errors: duplicate POU names or POU/DUT name collisions."""
     errors = []
