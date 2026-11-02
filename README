@@ -13,6 +13,7 @@ CODESYS 仿真行为测试 → 结构化修复，并在 30 道 PLC 编程题上�
 | `agent/` | 自研 ST 生成 Agent harness（LLM 客户端、提示、解析、编译/测试反馈循环） |
 | `baseline/` | 现有框架基线：Codex CLI（经 DMXAPI responses 协议驱动，同一评测管线） |
 | `experiments/` | 实验编排与指标汇总；`mocks/` 为离线自测用的脚本化模型输出 |
+| `report/` | 实验报告（环境、数据集与 LTL、框架设计、四设置结果与分析） |
 | `公共题库.json` / `任务说明.md` | 原始题目与作业要求 |
 
 ## 环境
@@ -53,6 +54,11 @@ python experiments/run_eval.py --framework codex --models deepseek,qwen \
 # 7) 汇总任一运行目录为 Markdown 表
 python experiments/summarize.py experiments/runs/agent_2models
 ```
+
+## 实验报告
+
+- [实验报告（含逐题 LTL 规约与四设置结果分析）](report/实验报告.md)
+- [四设置结果汇总表](experiments/RESULTS_FULL.md)
 
 ## 实验指标
 
