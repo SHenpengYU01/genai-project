@@ -103,7 +103,8 @@
             "hiAlarm": false,
             "loAlarm": false,
             "error": false
-          }
+          },
+          "purpose": "Value 50 位于 20..80 之间：不报警"
         },
         {
           "inputs": {
@@ -114,7 +115,8 @@
           },
           "expect": {
             "hiAlarm": true
-          }
+          },
+          "purpose": "Value 85 > hiLevel 80：触发高报警"
         },
         {
           "inputs": {
@@ -125,7 +127,8 @@
           },
           "expect": {
             "hiAlarm": true
-          }
+          },
+          "purpose": "Value 82 仍在 80-5=75 之上：高报警保持不清除"
         },
         {
           "inputs": {
@@ -136,8 +139,20 @@
           },
           "expect": {
             "hiAlarm": false
-          }
+          },
+          "purpose": "Value 74 < 75：退出高报警"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。无报警、无错误；上下限 20/80、回差 5 合法。",
+      "coverage": [
+        "正常区间不报警",
+        "越过上限触发高报警（P1）",
+        "回落到回差窗口内时高报警保持（滞环）",
+        "跌破 上限-回差 才退出高报警（P2）"
+      ],
+      "specRefs": [
+        "P1",
+        "P2"
       ]
     },
     {
@@ -154,7 +169,8 @@
           },
           "expect": {
             "loAlarm": true
-          }
+          },
+          "purpose": "Value 15 < loLevel 20：触发低报警（同时验证高报警不被误触发）"
         },
         {
           "inputs": {
@@ -165,7 +181,8 @@
           },
           "expect": {
             "loAlarm": true
-          }
+          },
+          "purpose": "Value 24 仍在 20+5=25 之下：低报警保持"
         },
         {
           "inputs": {
@@ -176,8 +193,19 @@
           },
           "expect": {
             "loAlarm": false
-          }
+          },
+          "purpose": "Value 26 > 25：退出低报警"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。无报警、无错误；上下限 20/80、回差 5 合法。",
+      "coverage": [
+        "低于下限触发低报警（P3）",
+        "回差窗口内低报警保持",
+        "高于 下限+回差 才退出（P4）"
+      ],
+      "specRefs": [
+        "P3",
+        "P4"
       ]
     },
     {
@@ -197,7 +225,8 @@
             "status": 32769,
             "hiAlarm": false,
             "loAlarm": false
-          }
+          },
+          "purpose": "loLevel 60 ≥ hiLevel 50：报配置错误 16#8001，两路报警保持关闭"
         },
         {
           "inputs": {
@@ -211,8 +240,18 @@
             "status": 32770,
             "hiAlarm": false,
             "loAlarm": false
-          }
+          },
+          "purpose": "上下限已合法但 hystWindow 70 超过量程：报 16#8002"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。无报警、无错误。",
+      "coverage": [
+        "上下限颠倒的配置错误（P5）",
+        "回差窗口大于量程的配置错误",
+        "错误状态优先于报警判定：两类报警都被禁止"
+      ],
+      "specRefs": [
+        "P5"
       ]
     }
   ],

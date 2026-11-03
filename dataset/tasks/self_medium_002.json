@@ -80,7 +80,8 @@
           "expect": {
             "pump1Run": true,
             "pump2Run": false
-          }
+          },
+          "purpose": "start 有效：1 号泵运行、2 号泵停止"
         },
         {
           "inputs": {
@@ -92,7 +93,8 @@
           "expect": {
             "pump1Run": false,
             "pump2Run": false
-          }
+          },
+          "purpose": "stop 有效：两泵都停止"
         },
         {
           "inputs": {
@@ -104,8 +106,19 @@
           "expect": {
             "pump1Run": false,
             "pump2Run": true
-          }
+          },
+          "purpose": "再次 start：交替到 2 号泵运行，1 号泵停止"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。两泵均未运行；交替顺序从 1 号泵开始。",
+      "coverage": [
+        "首次启动由 1 号泵（主泵）运行（P2 至多一泵）",
+        "stop 时两泵均停（P1）",
+        "再次启动交替到 2 号泵"
+      ],
+      "specRefs": [
+        "P1",
+        "P2"
       ]
     }
   ],

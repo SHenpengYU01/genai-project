@@ -175,7 +175,8 @@
           },
           "expect": {
             "MoveDown": true
-          }
+          },
+          "purpose": "手动模式、下降按钮有效、未到下限位：MoveDown 输出"
         },
         {
           "inputs": {
@@ -200,8 +201,18 @@
           },
           "expect": {
             "MoveDown": false
-          }
+          },
+          "purpose": "下限位触发：MoveDown 撤销（到位停止）"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。手动模式；急停回路正常（EmergencyStop=TRUE 表示未急停）；下降轴未到下限位，其余各轴停在其限位处、对应按钮未按下。",
+      "coverage": [
+        "手动模式下按下降按钮驱动 MoveDown",
+        "到达下限位后撤销 MoveDown",
+        "未操作的动作输出保持关闭"
+      ],
+      "specRefs": [
+        "P1"
       ]
     },
     {
@@ -237,8 +248,16 @@
             "MoveRight": false,
             "ActivateGrip": false,
             "ActivateRelease": false
-          }
+          },
+          "purpose": "急停触发：6 路动作输出全部为 FALSE"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。单步模式为 TRUE、其余模式为 FALSE；急停有效（EmergencyStop=FALSE）；各轴按钮均未按下，除下降轴外其余轴在其限位处。",
+      "coverage": [
+        "急停（EmergencyStop=FALSE）时所有动作输出关闭（P1）"
+      ],
+      "specRefs": [
+        "P1"
       ]
     }
   ],

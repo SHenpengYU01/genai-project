@@ -86,7 +86,8 @@
             "motorUp": true,
             "motorDown": false,
             "doorOpen": false
-          }
+          },
+          "purpose": "1 层、目标 3 层：上行，门关闭"
         },
         {
           "inputs": {
@@ -99,7 +100,8 @@
             "motorUp": true,
             "motorDown": false,
             "doorOpen": false
-          }
+          },
+          "purpose": "经过 2 层：继续上行"
         },
         {
           "inputs": {
@@ -112,7 +114,8 @@
             "motorUp": false,
             "motorDown": false,
             "doorOpen": false
-          }
+          },
+          "purpose": "到达 3 层：停止上行与下行"
         },
         {
           "inputs": {
@@ -125,8 +128,20 @@
             "motorUp": false,
             "motorDown": false,
             "doorOpen": true
-          }
+          },
+          "purpose": "停稳后开门（门开时无运动输出）"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。电梯停靠在 1 层，门关闭，门定时器未启动；周期 1s。",
+      "coverage": [
+        "目标层在上方时上行（P1 上下行互斥）",
+        "跨层过程中持续上行",
+        "到达目标层后停止",
+        "停稳后开门且开门时不再运动（P2）"
+      ],
+      "specRefs": [
+        "P1",
+        "P2"
       ]
     }
   ],

@@ -55,10 +55,13 @@ def _scalar_keys(task):
     return keys
 
 
-def run_task(task, pous, duts=None):
+def run_task(task, pous, duts=None, trace=False):
     """Run all test cases of `task` against `pous` (+ optional `duts`).
 
     `pous` must contain the function block under test (name == task['pou']['name']).
+    With ``trace=True`` the driver also records the actual value of every
+    output (and asserted inout) leaf at each step, read back per group as
+    ``groups[i]['trace'] = {path: [value_str, ...]}`` in step order.
     Returns {"allPass", "passCnt", "failCnt", "groups": [...]}.
     """
     duts = duts or []
@@ -81,11 +84,17 @@ def run_task(task, pous, duts=None):
     for sm in order:
         sub = dict(task)
         sub["test_cases"] = groups[sm]
-        driver = driver_gen.generate(sub)
+        driver = driver_gen.generate(sub, trace=trace)
+        n_steps = sum(len(c["steps"]) for c in groups[sm])
+        specs = driver_gen.trace_specs(sub) if trace else []
+        if trace:
+            reads = ["CI_TEST_DRIVER.%s[%d]" % (sp["var"], i)
+                     for sp in specs for i in range(n_steps)]
+        else:
+            reads = ["CI_TEST_DRIVER.fail_%s" % k for k in scalar_keys]
         req = {"id": task["id"], "scan_ms": sm, "duts": duts,
                "pous": pous, "driver": driver,
-               "debug_reads": ["CI_TEST_DRIVER.fail_%s" % k
-                               for k in scalar_keys]}
+               "debug_reads": reads}
         resp = _run_sim(req)
         if not resp.get("ok"):
             raise RuntimeError("simulation failed for scan_ms=%d: %s"
@@ -97,7 +106,7 @@ def run_task(task, pous, duts=None):
         for k, v in (resp.get("debug") or {}).items():
             if not str(v).startswith("ERR"):
                 fail_values[k.rsplit("fail_", 1)[-1]] = v
-        group_results.append({
+        grp = {
             "scan_ms": sm, "nCases": len(groups[sm]),
             "caseIds": [c["id"] for c in groups[sm]],
             "allPass": resp["allPass"], "passCnt": resp["passCnt"],
@@ -105,7 +114,15 @@ def run_task(task, pous, duts=None):
             "firstFailTc": resp.get("firstFailTc"),
             "firstFailStep": resp.get("firstFailStep"),
             "failValues": fail_values,
-        })
+        }
+        if trace:
+            debug = resp.get("debug") or {}
+            grp["trace"] = {
+                sp["path"]: [debug.get("CI_TEST_DRIVER.%s[%d]"
+                                       % (sp["var"], i))
+                             for i in range(n_steps)]
+                for sp in specs}
+        group_results.append(grp)
 
     return {"allPass": all_pass, "passCnt": total_pass,
             "failCnt": total_fail, "groups": group_results}

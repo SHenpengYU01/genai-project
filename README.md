@@ -9,11 +9,11 @@ CODESYS 仿真行为测试 → 结构化修复，并在 30 道 PLC 编程题上�
 |------|------|
 | `tool/` | CODESYS 编译服务（CPython 客户端 + IronPython worker + 模板工程），DUT/Standard 库支持 |
 | `tester/` | 行为测试：ST 自测驱动生成 + CODESYS 仿真执行（在线 API） |
-| `dataset/` | 30 道题（20 公共 + 10 自建），含 LTL 规约、测试用例、可编译参考实现；schema 与校验脚本 |
+| `dataset/` | 30 道题（20 公共 + 10 自建），含 LTL 规约、测试用例（含逐步测试目的/覆盖内容/关联规约）、可编译参考实现；schema、校验与用例文档渲染脚本 |
 | `agent/` | 自研 ST 生成 Agent harness（LLM 客户端、提示、解析、编译/测试反馈循环） |
 | `baseline/` | 现有框架基线：Codex CLI（经 DMXAPI responses 协议驱动，同一评测管线） |
 | `experiments/` | 实验编排与指标汇总；`mocks/` 为离线自测用的脚本化模型输出 |
-| `report/` | 实验报告（环境、数据集与 LTL、框架设计、四设置结果与分析） |
+| `report/` | 实验报告（环境、数据集与 LTL、框架设计、四设置结果与分析）+ 测试用例文档 |
 | `公共题库.json` / `任务说明.md` | 原始题目与作业要求 |
 
 ## 环境
@@ -51,7 +51,10 @@ python experiments/run_eval.py --models deepseek,qwen \
 python experiments/run_eval.py --framework codex --models deepseek,qwen \
     --max-rounds 5 --resume --outdir experiments/runs/codex_2models
 
-# 7) 汇总任一运行目录为 Markdown 表
+# 7) 生成测试用例文档（跑参考实现逐拍实测实际输出，约 10-20 分钟）
+python dataset/render_cases.py
+
+# 8) 汇总任一运行目录为 Markdown 表
 python experiments/summarize.py experiments/runs/agent_2models
 ```
 
@@ -62,7 +65,7 @@ python experiments/summarize.py experiments/runs/agent_2models
 | 数据集（公共 20 + 自建 10）与 schema | `dataset/tasks/`、`dataset/schema.md`、`dataset/build_*.py` |
 | 来源/改编/合理性/多样性说明 | 报告 §2.2–2.4；自建题 `meta.scenario` |
 | 逐题 LTL 规约（75 条） | `dataset/tasks/*.json` 的 `ltl_specs`；报告附录 A |
-| 逐题测试用例（54 组 / 199 步） | `dataset/tasks/*.json` 的 `test_cases`；执行器 `tester/` |
+| 逐题测试用例（54 组 / 199 步，含每步测试目的） | `report/测试用例.md`（按作业模板渲染）；数据 `dataset/tasks/*.json` 的 `test_cases`；说明文字 `dataset/tc_annotations.py`；执行器 `tester/` |
 | 自研 Agent harness | `agent/`（见 `agent/README.md`） |
 | CODESYS 编译集成 | `tool/`（见 `tool/README.md`） |
 | 自动行为测试（加分项） | `tester/`（CODESYS 仿真 + 自测驱动） |
@@ -73,6 +76,7 @@ python experiments/summarize.py experiments/runs/agent_2models
 ## 实验报告
 
 - [实验报告（含逐题 LTL 规约与四设置结果分析）](report/实验报告.md)
+- [测试用例文档（按作业模板：名称/初始状态/输入与步骤/预期输出/覆盖内容/实际输出/检查内容）](report/测试用例.md)
 - [四设置结果汇总表](experiments/RESULTS_FULL.md)
 
 ## 实验指标

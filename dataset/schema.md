@@ -50,19 +50,44 @@
 
 ```json
 { "id": "TC1", "description": "正常启动与保持", "scan_ms": 10,
+  "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。",
+  "coverage": ["初始化后保持停止", "满足条件时启动（P2）", "松开启动按钮后自保持运行"],
+  "specRefs": ["P2"],
   "steps": [
-    { "inputs": { "StartBtn": false, "StopBtn": false, "EStop": false },
+    { "purpose": "初始化：无启动信号，电机停止",
+      "inputs": { "StartBtn": false, "StopBtn": false, "EStop": false },
       "expect": { "Motor": false } }
   ] }
 ```
 
 - 执行语义：对每个 test_case，初始化 FB 内部状态；按 `steps` 顺序，每步
-  「设 inputs → 跑一个扫描周期 → 读 outputs 与 `expect` 比较」。`expect` 是
-  **该周期结束后**的输出值；`expect` 中**未列出的输出隐式为 FALSE**。
+  「设 inputs → 跑一个扫描周期 → 读取并比较 `expect` 中的输出」。`expect` 是
+  **该周期结束后**的输出值。
+- **只比较 `expect` 中列出的输出（及其元素/成员）**，未列出的输出不做检查。
+  若某步确实要求"其余输出为 FALSE"，需在 `expect` 中显式写 `false`；
+  空 `expect` 表示该步只推进状态、不做任何断言。
 - `step.repeat`（可选，默认 1）：该步的 inputs 连续保持 N 个扫描周期，`expect`
   在第 N 个周期结束后**断言一次**（用于让定时器/状态机推进，避免手写几十步）。
 - 涉及定时器的题，`scan_ms` 表示每个 step 代表的扫描周期时长，仿真器据此累加时间。
 - 状态型题目（含边沿/保持）的测试用例要覆盖：初始态、触发、保持、复位、优先级冲突。
+
+### 模板要求的人工说明字段（`dataset/tc_annotations.py` 维护）
+
+作业文档「测试用例模板与示例」要求每个用例写清名称、初始状态、输入、预期输出、
+覆盖内容与实际结果。其中机器不可推导的部分以独立字段存放，`validate.py` 强制非空：
+
+| 字段 | 级别 | 含义 |
+|------|------|------|
+| `test_cases[].initialState` | 用例 | 开始测试前的实例状态（冷启动清零、定时器未启动、外部缓冲初值等） |
+| `test_cases[].coverage` | 用例 | 该用例检查的功能点、状态变化、边界与异常情况（字符串数组） |
+| `test_cases[].specRefs` | 用例 | 该用例提供证据的 LTL 规约 id（必须是 `ltl_specs` 中存在的 id） |
+| `steps[].purpose` | 步 | 该扫描周期的检查目的（模板表格中的「检查内容」列） |
+
+这些字段由 `dataset/tc_annotations.py` 在构建时注入（两个 build 脚本都会调用
+`apply()`），**不要手工改 `dataset/tasks/*.json`**：改注解后重跑
+`python dataset/build_public.py && python dataset/build_self.py`。
+`python dataset/render_cases.py` 会把它们连同参考实现的实测输出渲染成
+`report/测试用例.md`。
 
 ## `reference`
 

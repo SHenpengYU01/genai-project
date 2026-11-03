@@ -117,7 +117,8 @@
           "expect": {
             "MotorForward": true,
             "MotorReverse": false
-          }
+          },
+          "purpose": "手动模式按下正转：MotorForward 有效，反转无效"
         },
         {
           "inputs": {
@@ -134,7 +135,8 @@
           "expect": {
             "MotorForward": false,
             "MotorReverse": true
-          }
+          },
+          "purpose": "同时按下反转：正转撤销、反转有效"
         },
         {
           "inputs": {
@@ -151,8 +153,19 @@
           "expect": {
             "MotorForward": false,
             "MotorReverse": false
-          }
+          },
+          "purpose": "正反转按钮同时有效：两路输出都撤销（互锁）"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。手动模式；所有传感器与按钮复位。",
+      "coverage": [
+        "手动正转（P2）",
+        "反转按钮切换到反转，正转撤销（P1 互锁）",
+        "正反转同时按下时两者都不输出（P1）"
+      ],
+      "specRefs": [
+        "P1",
+        "P2"
       ]
     },
     {
@@ -172,7 +185,8 @@
             "ButtonB": false,
             "ButtonC": false
           },
-          "expect": {}
+          "expect": {},
+          "purpose": "产品到 A 工位并按下 A 按钮：等待放行，无输出"
         },
         {
           "inputs": {
@@ -188,7 +202,8 @@
           },
           "expect": {
             "MotorForward": true
-          }
+          },
+          "purpose": "撤销 A 按钮：电机开始正转"
         },
         {
           "inputs": {
@@ -204,7 +219,8 @@
           },
           "expect": {
             "MotorForward": true
-          }
+          },
+          "purpose": "到达 B 工位：电机继续正转"
         },
         {
           "inputs": {
@@ -218,7 +234,8 @@
             "ButtonB": true,
             "ButtonC": false
           },
-          "expect": {}
+          "expect": {},
+          "purpose": "按下 B 按钮：等待放行"
         },
         {
           "inputs": {
@@ -234,7 +251,8 @@
           },
           "expect": {
             "MotorForward": true
-          }
+          },
+          "purpose": "撤销 B 按钮：电机继续正转"
         },
         {
           "inputs": {
@@ -250,7 +268,8 @@
           },
           "expect": {
             "MotorForward": true
-          }
+          },
+          "purpose": "到达 C 工位：电机继续正转"
         },
         {
           "inputs": {
@@ -264,7 +283,8 @@
             "ButtonB": false,
             "ButtonC": true
           },
-          "expect": {}
+          "expect": {},
+          "purpose": "按下 C 按钮：等待完成确认，完成灯未亮"
         },
         {
           "inputs": {
@@ -280,8 +300,20 @@
           },
           "expect": {
             "CompletionLight": true
-          }
+          },
+          "purpose": "撤销 C 按钮：完成指示灯点亮"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。自动模式；产品位于 A 工位。",
+      "coverage": [
+        "自动流程按 A→B→C 顺序推进",
+        "产品经过各工位时电机持续正转",
+        "每个工位需要按钮放行后才继续",
+        "C 工位完成并撤销按钮后点亮完成灯（P3）"
+      ],
+      "specRefs": [
+        "P1",
+        "P3"
       ]
     }
   ],

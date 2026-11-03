@@ -9,6 +9,8 @@ Run:  python dataset/build_public.py
 import json
 import os
 
+import tc_annotations  # noqa: E402  (dataset/tc_annotations.py)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "tasks")
 
@@ -3101,6 +3103,7 @@ TASKS.append({
 def dump():
     os.makedirs(OUT, exist_ok=True)
     for t in TASKS:
+        tc_annotations.apply(t)  # 每步测试目的 / 初始状态 / 覆盖内容 / 规约关联
         fn = os.path.join(OUT, t["id"] + ".json")
         with open(fn, "w", encoding="utf-8") as f:
             json.dump(t, f, ensure_ascii=False, indent=2)

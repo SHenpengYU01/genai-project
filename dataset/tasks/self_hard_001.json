@@ -80,7 +80,8 @@
             "count": 0,
             "fullIndicator": false,
             "entryGate": true
-          }
+          },
+          "purpose": "初始：计数 0，满位指示灭，入口闸开放"
         },
         {
           "inputs": {
@@ -91,7 +92,8 @@
           "expect": {
             "count": 1,
             "entryGate": true
-          }
+          },
+          "purpose": "entrySensor 上升沿：计数 1"
         },
         {
           "inputs": {
@@ -101,7 +103,8 @@
           },
           "expect": {
             "count": 1
-          }
+          },
+          "purpose": "entrySensor 撤销：计数保持 1"
         },
         {
           "inputs": {
@@ -111,7 +114,8 @@
           },
           "expect": {
             "count": 2
-          }
+          },
+          "purpose": "再次上升沿：计数 2"
         },
         {
           "inputs": {
@@ -121,7 +125,8 @@
           },
           "expect": {
             "count": 2
-          }
+          },
+          "purpose": "撤销：计数保持 2"
         },
         {
           "inputs": {
@@ -133,7 +138,8 @@
             "count": 3,
             "fullIndicator": true,
             "entryGate": false
-          }
+          },
+          "purpose": "第 3 次上升沿：计数 3 达到容量，满位指示亮、入口闸关闭"
         },
         {
           "inputs": {
@@ -145,8 +151,21 @@
             "count": 2,
             "fullIndicator": false,
             "entryGate": true
-          }
+          },
+          "purpose": "入场撤销且出场触发：计数回 2，满位指示灭、入口闸重开"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。场内无车，计数 0，容量 3。",
+      "coverage": [
+        "入场传感器上升沿计数 +1",
+        "传感器撤销不影响计数（边沿计数）",
+        "满位时禁止入场并点亮满位指示（P2）",
+        "出场后计数 -1 并重新开放入口",
+        "计数保持 0..capacity（P1）"
+      ],
+      "specRefs": [
+        "P1",
+        "P2"
       ]
     }
   ],

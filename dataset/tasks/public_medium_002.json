@@ -94,7 +94,8 @@
             "average": 1.0,
             "windowSizeReached": false,
             "error": false
-          }
+          },
+          "purpose": "第 1 个样本 1.0：平均 1.0，窗口未满"
         },
         {
           "inputs": {
@@ -108,7 +109,8 @@
             "average": 1.5,
             "windowSizeReached": false,
             "error": false
-          }
+          },
+          "purpose": "第 2 个样本 2.0：平均 1.5，窗口未满"
         },
         {
           "inputs": {
@@ -122,7 +124,8 @@
             "average": 2.0,
             "windowSizeReached": true,
             "error": false
-          }
+          },
+          "purpose": "第 3 个样本 3.0：平均 2.0，窗口已满标志置位"
         },
         {
           "inputs": {
@@ -136,8 +139,20 @@
             "average": 3.0,
             "windowSizeReached": true,
             "error": false
-          }
+          },
+          "purpose": "第 4 个样本 4.0：滑出 1.0，窗口内为 2/3/4，平均 3.0"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。窗口为空，窗口长度 3；cyclicExecution 常 TRUE。",
+      "coverage": [
+        "首个样本的平均值",
+        "窗口未满时按已有样本求平均",
+        "样本数达到窗口长度时置 windowSizeReached",
+        "窗口滑动时丢弃最旧样本",
+        "无错误时 error=FALSE（P2）"
+      ],
+      "specRefs": [
+        "P2"
       ]
     },
     {
@@ -156,8 +171,17 @@
           "expect": {
             "error": true,
             "status": 33280
-          }
+          },
+          "purpose": "windowSize=0：置 error，status=16#8200，不产生平均值"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。窗口为空；本用例把 windowSize 设为非法值 0。",
+      "coverage": [
+        "窗口长度非法时报错（P1）",
+        "错误码 16#8200（33280）"
+      ],
+      "specRefs": [
+        "P1"
       ]
     }
   ],

@@ -76,7 +76,8 @@
           "expect": {
             "TEMP_SETPOINT_ADJUST": 3,
             "SUPPLY_FAN_RUN": false
-          }
+          },
+          "purpose": "自动、无人、节能：偏移 +3℃，风机不启动"
         },
         {
           "inputs": {
@@ -87,7 +88,8 @@
           "expect": {
             "TEMP_SETPOINT_ADJUST": 0,
             "SUPPLY_FAN_RUN": false
-          }
+          },
+          "purpose": "检测到有人：偏移归零"
         },
         {
           "inputs": {
@@ -98,8 +100,20 @@
           "expect": {
             "TEMP_SETPOINT_ADJUST": 4,
             "SUPPLY_FAN_RUN": false
-          }
+          },
+          "purpose": "切到夜间模式（3）：风机保持停止，偏移取 +4℃ 上限"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。送风机延时定时器未启动；模式选择器 0（自动）。",
+      "coverage": [
+        "自动模式无人且节能：设定点偏移 +3℃（P3）",
+        "自动模式有人：偏移归零",
+        "夜间模式：风机不运行（P1）且偏移取上限 +4℃（P2 边界）"
+      ],
+      "specRefs": [
+        "P1",
+        "P2",
+        "P3"
       ]
     },
     {
@@ -115,7 +129,8 @@
           },
           "expect": {
             "SUPPLY_FAN_RUN": false
-          }
+          },
+          "purpose": "有人第 1 拍：延时开始，风机不运行"
         },
         {
           "inputs": {
@@ -126,7 +141,8 @@
           "repeat": 29,
           "expect": {
             "SUPPLY_FAN_RUN": false
-          }
+          },
+          "purpose": "累计 30s（29 拍）仍未满足：风机不运行"
         },
         {
           "inputs": {
@@ -137,8 +153,18 @@
           "repeat": 1,
           "expect": {
             "SUPPLY_FAN_RUN": true
-          }
+          },
+          "purpose": "累计满 30s：风机运行"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。送风机延时定时器未启动；模式 1（舒适）、有人。",
+      "coverage": [
+        "有人后风机延时 30s 启动",
+        "延时未满时不运行",
+        "延时满足（第 31 次调用）后运行"
+      ],
+      "specRefs": [
+        "P1"
       ]
     }
   ],

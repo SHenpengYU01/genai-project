@@ -80,7 +80,8 @@
             "mainContactor": true,
             "starContactor": true,
             "deltaContactor": false
-          }
+          },
+          "purpose": "start 有效：主接触器 + 星形投入，三角形不投入"
         },
         {
           "inputs": {
@@ -93,7 +94,8 @@
             "mainContactor": true,
             "starContactor": true,
             "deltaContactor": false
-          }
+          },
+          "purpose": "星形保持 4 拍（累计 5s 内）"
         },
         {
           "inputs": {
@@ -106,8 +108,18 @@
             "mainContactor": true,
             "starContactor": false,
             "deltaContactor": true
-          }
+          },
+          "purpose": "满 5s：切到三角形，星形断开"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。主回路未接通，星/三角接触器均断开，切换定时器未启动；周期 1s。",
+      "coverage": [
+        "启动后主接触器与星形接触器投入（P1 星三角互锁）",
+        "星形运行 5s",
+        "定时到后切三角形：星形断开、三角形投入"
+      ],
+      "specRefs": [
+        "P1"
       ]
     }
   ],

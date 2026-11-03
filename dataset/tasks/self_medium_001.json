@@ -63,7 +63,8 @@
           "expect": {
             "binSel": 1,
             "sortPulse": true
-          }
+          },
+          "purpose": "高度 5 且 risingSort 上升沿：选 1 号箱，分拣脉冲输出一拍"
         },
         {
           "inputs": {
@@ -72,7 +73,8 @@
           },
           "expect": {
             "sortPulse": false
-          }
+          },
+          "purpose": "risingSort 撤销、高度改为 15：不动作，脉冲撤销"
         },
         {
           "inputs": {
@@ -82,7 +84,8 @@
           "expect": {
             "binSel": 2,
             "sortPulse": true
-          }
+          },
+          "purpose": "risingSort 再次上升沿：高度 15 选 2 号箱"
         },
         {
           "inputs": {
@@ -91,7 +94,8 @@
           },
           "expect": {
             "sortPulse": false
-          }
+          },
+          "purpose": "撤销、高度改为 25"
         },
         {
           "inputs": {
@@ -101,8 +105,19 @@
           "expect": {
             "binSel": 3,
             "sortPulse": true
-          }
+          },
+          "purpose": "上升沿：高度 25 选 3 号箱"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。无分拣请求（risingSort 有效电平作上升沿检测）；箱号初值未定义，由首拍给出。",
+      "coverage": [
+        "按高度区间选择箱号：<10→1 号、10..20→2 号、≥20→3 号",
+        "分拣脉冲只在上升沿产生一拍",
+        "脉冲撤销后不再输出",
+        "箱号始终在 1..3 内（P1）"
+      ],
+      "specRefs": [
+        "P1"
       ]
     }
   ],

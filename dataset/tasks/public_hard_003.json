@@ -142,7 +142,8 @@
             "weight": 150.0,
             "firingComplete": false
           },
-          "expect": {}
+          "expect": {},
+          "purpose": "产品位于上料位：等待放行"
         },
         {
           "inputs": {
@@ -161,7 +162,8 @@
           },
           "expect": {
             "MotorForward": true
-          }
+          },
+          "purpose": "上料放行：电机正转"
         },
         {
           "inputs": {
@@ -180,7 +182,8 @@
           },
           "expect": {
             "MotorForward": true
-          }
+          },
+          "purpose": "到达清洗位：继续正转"
         },
         {
           "inputs": {
@@ -197,7 +200,8 @@
             "weight": 150.0,
             "firingComplete": false
           },
-          "expect": {}
+          "expect": {},
+          "purpose": "按下清洗完成：等待"
         },
         {
           "inputs": {
@@ -216,7 +220,8 @@
           },
           "expect": {
             "MotorForward": true
-          }
+          },
+          "purpose": "撤销清洗完成：继续正转"
         },
         {
           "inputs": {
@@ -235,7 +240,8 @@
           },
           "expect": {
             "MotorForward": true
-          }
+          },
+          "purpose": "到达称重位：继续正转"
         },
         {
           "inputs": {
@@ -255,8 +261,20 @@
           "expect": {
             "firingTemp": 525.0,
             "kick": false
-          }
+          },
+          "purpose": "称重完成、重量 150g：折算焙烧温度 525.0，不合格剔除不动作"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。自动模式；产品在 1 号（上料）工位开始。",
+      "coverage": [
+        "完整流程：上料→清洗→称重→焙烧",
+        "合格品按重量 100..200 线性折算焙烧温度 500..550（P3）",
+        "150g → 525℃",
+        "产品在各工位之间传送时电机持续正转（P1 互斥）"
+      ],
+      "specRefs": [
+        "P1",
+        "P3"
       ]
     },
     {
@@ -279,7 +297,8 @@
             "weight": 150.0,
             "firingComplete": false
           },
-          "expect": {}
+          "expect": {},
+          "purpose": "产品位于上料位：等待放行"
         },
         {
           "inputs": {
@@ -298,7 +317,8 @@
           },
           "expect": {
             "MotorForward": true
-          }
+          },
+          "purpose": "上料放行：电机正转"
         },
         {
           "inputs": {
@@ -317,7 +337,8 @@
           },
           "expect": {
             "MotorForward": true
-          }
+          },
+          "purpose": "到达清洗位：继续正转"
         },
         {
           "inputs": {
@@ -334,7 +355,8 @@
             "weight": 150.0,
             "firingComplete": false
           },
-          "expect": {}
+          "expect": {},
+          "purpose": "按下清洗完成：等待"
         },
         {
           "inputs": {
@@ -353,7 +375,8 @@
           },
           "expect": {
             "MotorForward": true
-          }
+          },
+          "purpose": "撤销清洗完成：继续正转"
         },
         {
           "inputs": {
@@ -372,7 +395,8 @@
           },
           "expect": {
             "MotorForward": true
-          }
+          },
+          "purpose": "到达称重位：继续正转"
         },
         {
           "inputs": {
@@ -391,8 +415,18 @@
           },
           "expect": {
             "kick": true
-          }
+          },
+          "purpose": "称重完成、重量 250g：剔除输出 kick 置位（不合格）"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。自动模式；产品在 1 号（上料）工位开始。",
+      "coverage": [
+        "完整流程同上（保证与 TC1 起点一致）",
+        "重量超出 100..200 判不合格并剔除",
+        "剔除时刻不再给出焙烧温度基准"
+      ],
+      "specRefs": [
+        "P1"
       ]
     }
   ],

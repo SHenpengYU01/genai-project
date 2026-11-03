@@ -74,7 +74,8 @@
           "expect": {
             "alarmLatched": false,
             "horn": false
-          }
+          },
+          "purpose": "初始：无报警、无蜂鸣"
         },
         {
           "inputs": {
@@ -85,7 +86,8 @@
           "expect": {
             "alarmLatched": true,
             "horn": true
-          }
+          },
+          "purpose": "alarmIn 有效：闭锁置位，蜂鸣器响"
         },
         {
           "inputs": {
@@ -96,7 +98,8 @@
           "expect": {
             "alarmLatched": true,
             "horn": false
-          }
+          },
+          "purpose": "确认按钮有效：蜂鸣器静音，闭锁保持"
         },
         {
           "inputs": {
@@ -107,8 +110,19 @@
           "expect": {
             "alarmLatched": false,
             "horn": false
-          }
+          },
+          "purpose": "复位有效：闭锁清除"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。无报警闭锁，蜂鸣器关闭。",
+      "coverage": [
+        "报警触发后闭锁并鸣笛",
+        "确认后蜂鸣器静音但闭锁保持（P1）",
+        "复位后清除闭锁（P2）"
+      ],
+      "specRefs": [
+        "P1",
+        "P2"
       ]
     }
   ],

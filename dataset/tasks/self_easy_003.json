@@ -80,7 +80,8 @@
           "expect": {
             "openCmd": false,
             "closeCmd": false
-          }
+          },
+          "purpose": "有人：状态机进入开门状态，本拍开门命令尚未输出（下一拍生效）"
         },
         {
           "inputs": {
@@ -92,7 +93,8 @@
           "expect": {
             "openCmd": true,
             "closeCmd": false
-          }
+          },
+          "purpose": "开门命令输出，同时开到位信号触发状态迁移"
         },
         {
           "inputs": {
@@ -105,7 +107,8 @@
           "expect": {
             "openCmd": false,
             "closeCmd": false
-          }
+          },
+          "purpose": "完全开启后保持 3s（hold 定时器 3 拍）"
         },
         {
           "inputs": {
@@ -118,7 +121,8 @@
           "expect": {
             "openCmd": false,
             "closeCmd": false
-          }
+          },
+          "purpose": "保持时间到：状态迁到关门，本拍关门命令尚未输出"
         },
         {
           "inputs": {
@@ -131,8 +135,20 @@
           "expect": {
             "openCmd": false,
             "closeCmd": true
-          }
+          },
+          "purpose": "关门命令输出"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。门处于关门静止状态（stage 0），保持定时器未启动。",
+      "coverage": [
+        "感应到人后进入开门状态（P2）",
+        "开到位（openLimit）后进入保持状态",
+        "完全开启后保持 3s 再关门",
+        "开门与关门命令互斥（P1）"
+      ],
+      "specRefs": [
+        "P1",
+        "P2"
       ]
     },
     {
@@ -150,7 +166,8 @@
           "expect": {
             "openCmd": false,
             "closeCmd": false
-          }
+          },
+          "purpose": "有人：进入开门状态，本拍无命令"
         },
         {
           "inputs": {
@@ -162,7 +179,8 @@
           "expect": {
             "openCmd": true,
             "closeCmd": false
-          }
+          },
+          "purpose": "开门命令输出并开到位"
         },
         {
           "inputs": {
@@ -175,7 +193,8 @@
           "expect": {
             "openCmd": false,
             "closeCmd": false
-          }
+          },
+          "purpose": "完全开启后保持 3s"
         },
         {
           "inputs": {
@@ -188,7 +207,8 @@
           "expect": {
             "openCmd": false,
             "closeCmd": false
-          }
+          },
+          "purpose": "保持时间到：状态迁到关门"
         },
         {
           "inputs": {
@@ -201,7 +221,8 @@
           "expect": {
             "openCmd": false,
             "closeCmd": true
-          }
+          },
+          "purpose": "关门命令输出"
         },
         {
           "inputs": {
@@ -213,7 +234,8 @@
           "expect": {
             "openCmd": false,
             "closeCmd": true
-          }
+          },
+          "purpose": "障碍物出现当拍：命令尚未改变（状态迁移下一拍生效）"
         },
         {
           "inputs": {
@@ -225,8 +247,19 @@
           "expect": {
             "openCmd": true,
             "closeCmd": false
-          }
+          },
+          "purpose": "障碍物后一个扫描：重新开门，关门命令撤销"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。门处于关门静止状态（stage 0），保持定时器未启动。",
+      "coverage": [
+        "前段与 TC1 相同：开门→保持→关门",
+        "关门过程中检测到障碍物时重新开门",
+        "重新开门后关门命令撤销（P1 互斥）"
+      ],
+      "specRefs": [
+        "P1",
+        "P2"
       ]
     }
   ],

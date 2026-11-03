@@ -54,7 +54,8 @@
           "expect": {
             "NS_Green": true,
             "EW_Green": false
-          }
+          },
+          "purpose": "首拍：南北绿灯、东西红灯"
         },
         {
           "inputs": {},
@@ -62,7 +63,8 @@
           "expect": {
             "NS_Green": true,
             "EW_Green": false
-          }
+          },
+          "purpose": "南北相位保持 5 拍（共 5s）"
         },
         {
           "inputs": {},
@@ -70,7 +72,8 @@
           "expect": {
             "NS_Green": false,
             "EW_Green": true
-          }
+          },
+          "purpose": "越过 5s 边界后切换：东西绿灯、南北红灯"
         },
         {
           "inputs": {},
@@ -78,7 +81,8 @@
           "expect": {
             "NS_Green": false,
             "EW_Green": true
-          }
+          },
+          "purpose": "东西相位保持 5 拍（共 5s）"
         },
         {
           "inputs": {},
@@ -86,8 +90,20 @@
           "expect": {
             "NS_Green": true,
             "EW_Green": false
-          }
+          },
+          "purpose": "再次切换回南北相位，完成一个周期"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。无输入，周期 1s；定时器未启动，相位为初始相位。",
+      "coverage": [
+        "初始相位输出（P2 至少一路绿灯）",
+        "相位保持 5s",
+        "相位切换：两方向绿灯互斥（P1）",
+        "一个完整周期后回到初始相位"
+      ],
+      "specRefs": [
+        "P1",
+        "P2"
       ]
     }
   ],

@@ -80,7 +80,8 @@
           "expect": {
             "pumpOn": true,
             "highHighAlarm": false
-          }
+          },
+          "purpose": "液位 5 < 10：启动水泵，无高高报警"
         },
         {
           "inputs": {
@@ -92,7 +93,8 @@
           "expect": {
             "pumpOn": true,
             "highHighAlarm": false
-          }
+          },
+          "purpose": "液位 15（两阈值之间）：水泵保持运行"
         },
         {
           "inputs": {
@@ -104,8 +106,18 @@
           "expect": {
             "pumpOn": false,
             "highHighAlarm": false
-          }
+          },
+          "purpose": "液位 22 > 20：停止水泵"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。无报警；低/高/高高液位点 10/20/25。",
+      "coverage": [
+        "低液位启动水泵（P2）",
+        "启动点与停止点之间保持运行（滞环）",
+        "到高液位停止水泵"
+      ],
+      "specRefs": [
+        "P2"
       ]
     },
     {
@@ -123,8 +135,17 @@
           "expect": {
             "highHighAlarm": true,
             "pumpOn": false
-          }
+          },
+          "purpose": "液位 26 > 25：高高报警置位，水泵不运行"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。无报警；低/高/高高液位点 10/20/25。",
+      "coverage": [
+        "超过高高报警点报警（P1）",
+        "报警时不启动水泵"
+      ],
+      "specRefs": [
+        "P1"
       ]
     }
   ],

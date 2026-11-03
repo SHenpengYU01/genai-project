@@ -85,7 +85,8 @@
           "expect": {
             "HeaterOutput": true,
             "OverheatProtection": false
-          }
+          },
+          "purpose": "传感器 30 < 设定 50：HeaterOutput 有效，无过热保护"
         },
         {
           "inputs": {
@@ -95,8 +96,17 @@
           "expect": {
             "HeaterOutput": false,
             "OverheatProtection": false
-          }
+          },
+          "purpose": "传感器 60 > 设定 50：停止加热"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。无过热保护、无传感器故障；设定值 50℃。",
+      "coverage": [
+        "低于设定值加热（P2）",
+        "高于设定值停止加热"
+      ],
+      "specRefs": [
+        "P2"
       ]
     },
     {
@@ -111,8 +121,16 @@
           },
           "expect": {
             "HeaterOutput": false
-          }
+          },
+          "purpose": "传感器 150 > 100：视为故障，加热输出关断"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。无过热保护；设定值 50℃，传感器读数越界。",
+      "coverage": [
+        "传感器读数越量程（>100）判为故障并关断加热（P1）"
+      ],
+      "specRefs": [
+        "P1"
       ]
     },
     {
@@ -129,7 +147,8 @@
           "expect": {
             "HeaterOutput": true,
             "OverheatProtection": false
-          }
+          },
+          "purpose": "低温持续加热 5 拍：过热保护尚未触发，加热保持"
         },
         {
           "inputs": {
@@ -140,7 +159,8 @@
           "expect": {
             "HeaterOutput": false,
             "OverheatProtection": true
-          }
+          },
+          "purpose": "第 6 拍触发过热保护：加热输出关断"
         },
         {
           "inputs": {
@@ -151,7 +171,8 @@
           "expect": {
             "HeaterOutput": false,
             "OverheatProtection": true
-          }
+          },
+          "purpose": "保护保持 3 拍：加热始终关断"
         },
         {
           "inputs": {
@@ -162,7 +183,8 @@
           "expect": {
             "HeaterOutput": false,
             "OverheatProtection": false
-          }
+          },
+          "purpose": "保护解除当拍：过热度已回落，但本拍仍不加热"
         },
         {
           "inputs": {
@@ -173,8 +195,18 @@
           "expect": {
             "HeaterOutput": true,
             "OverheatProtection": false
-          }
+          },
+          "purpose": "保护解除后低温条件仍然成立：重新加热"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。无过热保护；设定值 50℃，传感器读数正常 30℃。",
+      "coverage": [
+        "持续加热后触发过热保护（内部计时）",
+        "过热保护期间禁止加热（P3）",
+        "保护解除后重新具备加热条件"
+      ],
+      "specRefs": [
+        "P3"
       ]
     }
   ],

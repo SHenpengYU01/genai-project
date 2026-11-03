@@ -87,7 +87,8 @@
           "expect": {
             "VFD_RUN": false,
             "PUMP_RUNTIME_ACC": "T#0ms"
-          }
+          },
+          "purpose": "初始无粘信号：泵不运行，累计时间 0"
         },
         {
           "inputs": {
@@ -99,7 +100,8 @@
           "expect": {
             "VFD_RUN": false,
             "PUMP_RUNTIME_ACC": "T#0ms"
-          }
+          },
+          "purpose": "粘信号有效第 1 拍：去抖计时开始，仍不运行"
         },
         {
           "inputs": {
@@ -111,7 +113,8 @@
           "expect": {
             "VFD_RUN": false,
             "PUMP_RUNTIME_ACC": "T#0ms"
-          }
+          },
+          "purpose": "去抖计时第 2 拍（累计 10ms）：仍不运行"
         },
         {
           "inputs": {
@@ -123,7 +126,8 @@
           "expect": {
             "VFD_RUN": false,
             "PUMP_RUNTIME_ACC": "T#0ms"
-          }
+          },
+          "purpose": "去抖计时第 3 拍（累计 20ms）：仍不运行"
         },
         {
           "inputs": {
@@ -135,7 +139,8 @@
           "expect": {
             "VFD_RUN": false,
             "PUMP_RUNTIME_ACC": "T#0ms"
-          }
+          },
+          "purpose": "去抖计时第 4 拍（累计 30ms）：仍不运行"
         },
         {
           "inputs": {
@@ -147,7 +152,8 @@
           "expect": {
             "VFD_RUN": true,
             "PUMP_RUNTIME_ACC": "T#10ms"
-          }
+          },
+          "purpose": "去抖累计达 50ms：启动运行，并累计 1 个周期 10ms"
         },
         {
           "inputs": {
@@ -159,8 +165,19 @@
           "expect": {
             "VFD_RUN": true,
             "PUMP_RUNTIME_ACC": "T#20ms"
-          }
+          },
+          "purpose": "继续运行一拍：累计时间增至 20ms，验证单调递增"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。去抖定时器未启动，累计运行时间 0；去抖时间 50ms、任务周期 10ms。",
+      "coverage": [
+        "无粘信号时不运行",
+        "去抖期间不运行（条件需连续保持 50ms）",
+        "去抖满足后启动，并在同一拍开始累计运行时间",
+        "运行期间累计时间按周期递增（P3 单调性）"
+      ],
+      "specRefs": [
+        "P3"
       ]
     },
     {
@@ -178,7 +195,8 @@
           "expect": {
             "VFD_RUN": false,
             "PUMP_RUNTIME_ACC": "T#0ms"
-          }
+          },
+          "purpose": "初始无粘信号：不运行，累计 0"
         },
         {
           "inputs": {
@@ -190,7 +208,8 @@
           "expect": {
             "VFD_RUN": false,
             "PUMP_RUNTIME_ACC": "T#0ms"
-          }
+          },
+          "purpose": "粘信号有效第 1 拍：去抖开始，仍不运行"
         },
         {
           "inputs": {
@@ -202,7 +221,8 @@
           "expect": {
             "VFD_RUN": false,
             "PUMP_RUNTIME_ACC": "T#0ms"
-          }
+          },
+          "purpose": "去抖计时第 2 拍：仍不运行"
         },
         {
           "inputs": {
@@ -214,7 +234,8 @@
           "expect": {
             "VFD_RUN": false,
             "PUMP_RUNTIME_ACC": "T#0ms"
-          }
+          },
+          "purpose": "去抖计时第 3 拍：仍不运行"
         },
         {
           "inputs": {
@@ -226,7 +247,8 @@
           "expect": {
             "VFD_RUN": false,
             "PUMP_RUNTIME_ACC": "T#0ms"
-          }
+          },
+          "purpose": "去抖计时第 4 拍：仍不运行"
         },
         {
           "inputs": {
@@ -238,7 +260,8 @@
           "expect": {
             "VFD_RUN": true,
             "PUMP_RUNTIME_ACC": "T#10ms"
-          }
+          },
+          "purpose": "去抖累计达 50ms：启动运行，累计 10ms"
         },
         {
           "inputs": {
@@ -250,8 +273,19 @@
           "expect": {
             "VFD_RUN": false,
             "PUMP_RUNTIME_ACC": "T#10ms"
-          }
+          },
+          "purpose": "粘信号撤销：当拍停止，累计时间保持 10ms 不清零"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。去抖定时器未启动；去抖时间 50ms、任务周期 10ms。",
+      "coverage": [
+        "去抖后启动（与 TC1 相同前段，保证两例起点一致）",
+        "粘信号撤销时当拍停止（P2 立即停止）",
+        "停止后累计运行时间保持不清零（P3 非降）"
+      ],
+      "specRefs": [
+        "P2",
+        "P3"
       ]
     },
     {
@@ -270,8 +304,17 @@
             "VFD_RUN": true,
             "PUMP_RUNTIME_ACC": "T#500h",
             "PUMP_MAINT_DUE": true
-          }
+          },
+          "purpose": "以 500h 的单拍周期启动：一拍即越过 50ms 去抖，运行并累计到维护阈值，维护指示置位"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。去抖时间 50ms；本用例把任务周期放大到 500h，用于单拍触发维护阈值。",
+      "coverage": [
+        "累计运行时间达到维护阈值时置位维护指示",
+        "阈值判定与启动在同一拍完成"
+      ],
+      "specRefs": [
+        "P3"
       ]
     }
   ],

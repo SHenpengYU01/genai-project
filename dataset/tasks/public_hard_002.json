@@ -133,7 +133,8 @@
           },
           "expect": {
             "valveARun": false
-          }
+          },
+          "purpose": "手动模式、按钮未按下：阀门 A 关闭"
         },
         {
           "inputs": {
@@ -151,7 +152,8 @@
           },
           "expect": {
             "valveARun": true
-          }
+          },
+          "purpose": "valveAStart 上升沿：阀门 A 开启"
         },
         {
           "inputs": {
@@ -169,7 +171,8 @@
           },
           "expect": {
             "valveARun": true
-          }
+          },
+          "purpose": "按钮保持松开：阀门 A 保持开启，验证边沿触发"
         },
         {
           "inputs": {
@@ -187,8 +190,18 @@
           },
           "expect": {
             "valveARun": false
-          }
+          },
+          "purpose": "再次上升沿：阀门 A 切换为关闭"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。esTop 为安全回路正常（TRUE）；手动模式；所有阀门关闭。",
+      "coverage": [
+        "手动模式下按按钮上升沿切换阀门 A（P2）",
+        "按钮保持与松开不影响状态（边沿触发而非电平触发）",
+        "再次上升沿切换回关闭"
+      ],
+      "specRefs": [
+        "P2"
       ]
     },
     {
@@ -212,7 +225,8 @@
           },
           "expect": {
             "valveARun": true
-          }
+          },
+          "purpose": "安全回路正常、按钮上升沿：阀门 A 开启"
         },
         {
           "inputs": {
@@ -234,8 +248,17 @@
             "valveCRun": false,
             "valveDRun": false,
             "mixMotorRun": false
-          }
+          },
+          "purpose": "estop=FALSE（急停触发）：5 路设备输出全部关断"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。安全回路正常（estop=TRUE）；手动模式。",
+      "coverage": [
+        "安全回路正常时按钮可开启阀门",
+        "急停（estop=FALSE）时所有设备停止（P1）"
+      ],
+      "specRefs": [
+        "P1"
       ]
     }
   ],

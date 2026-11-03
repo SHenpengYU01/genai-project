@@ -99,7 +99,8 @@
             "hasFallingEdges": false,
             "fallingBits": 0,
             "noOfFallingBits": 0
-          }
+          },
+          "purpose": "首拍以 0 为基准：输入 0 与基准一致，无变化"
         },
         {
           "inputs": {
@@ -113,7 +114,8 @@
             "hasFallingEdges": false,
             "fallingBits": 0,
             "noOfFallingBits": 0
-          }
+          },
+          "purpose": "输入 0→5（0b101）：bit0、bit2 上升，掩码 5、计数 2，无下降沿"
         },
         {
           "inputs": {
@@ -127,8 +129,21 @@
             "hasFallingEdges": false,
             "fallingBits": 0,
             "noOfFallingBits": 0
-          }
+          },
+          "purpose": "输入保持不变：上拍已记录边沿，本拍无变化与边沿"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。上一个值寄存器为 0，因此首个非零输入会被判为上升沿。",
+      "coverage": [
+        "基准拍：首拍与基准值相同，不报变化",
+        "多位同时上升：上升沿位掩码与位计数",
+        "边沿只维持一拍，随后清零",
+        "变化标志与位流的一致性（P1/P2）"
+      ],
+      "specRefs": [
+        "P1",
+        "P2",
+        "P4"
       ]
     },
     {
@@ -148,7 +163,8 @@
             "hasFallingEdges": false,
             "fallingBits": 0,
             "noOfFallingBits": 0
-          }
+          },
+          "purpose": "首拍输入 5：相对基准 0 有两位上升，无下降"
         },
         {
           "inputs": {
@@ -162,8 +178,19 @@
             "hasFallingEdges": true,
             "fallingBits": 4,
             "noOfFallingBits": 1
-          }
+          },
+          "purpose": "输入 5→1：bit2 由 1 变 0 计为下降（掩码 4），bit0 保持，无上升"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。首拍输入直接为非零值，用于验证新实例的基准就是 0。",
+      "coverage": [
+        "新实例首拍相对基准 0 的上升沿",
+        "同一拍内同时出现上升与下降时的位流分离",
+        "上升位与下降位不重叠（P4）"
+      ],
+      "specRefs": [
+        "P3",
+        "P4"
       ]
     }
   ],

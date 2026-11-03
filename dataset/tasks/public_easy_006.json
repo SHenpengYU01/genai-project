@@ -70,7 +70,8 @@
           "expect": {
             "BLOWER_RUN": false,
             "AERATION_BLOWER_CYCLE_COUNT": 0
-          }
+          },
+          "purpose": "DO_LOW 有效第 1 拍：延时计时开始，风机不运行，计数 0"
         },
         {
           "inputs": {
@@ -80,7 +81,8 @@
           "expect": {
             "BLOWER_RUN": false,
             "AERATION_BLOWER_CYCLE_COUNT": 0
-          }
+          },
+          "purpose": "延时第 2 拍：仍不运行"
         },
         {
           "inputs": {
@@ -90,7 +92,8 @@
           "expect": {
             "BLOWER_RUN": false,
             "AERATION_BLOWER_CYCLE_COUNT": 0
-          }
+          },
+          "purpose": "延时第 3 拍：仍不运行"
         },
         {
           "inputs": {
@@ -100,7 +103,8 @@
           "expect": {
             "BLOWER_RUN": false,
             "AERATION_BLOWER_CYCLE_COUNT": 0
-          }
+          },
+          "purpose": "延时第 4 拍：仍不运行"
         },
         {
           "inputs": {
@@ -110,7 +114,8 @@
           "expect": {
             "BLOWER_RUN": false,
             "AERATION_BLOWER_CYCLE_COUNT": 0
-          }
+          },
+          "purpose": "延时第 5 拍：仍不运行"
         },
         {
           "inputs": {
@@ -120,8 +125,20 @@
           "expect": {
             "BLOWER_RUN": true,
             "AERATION_BLOWER_CYCLE_COUNT": 1
-          }
+          },
+          "purpose": "延时满 5s（第 6 次调用）：风机运行，循环计数增至 1"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。延时定时器未启动，循环计数 0；任务周期 1s，延时 5s。",
+      "coverage": [
+        "有需求时启动延时但不立即运行",
+        "延时满 5s 后运行（TON 语义：第 6 次调用置位）",
+        "启动时刻循环计数 +1"
+      ],
+      "specRefs": [
+        "P1",
+        "P2",
+        "P3"
       ]
     },
     {
@@ -137,7 +154,8 @@
           "expect": {
             "BLOWER_RUN": false,
             "AERATION_BLOWER_CYCLE_COUNT": 0
-          }
+          },
+          "purpose": "DO_LOW 有效第 1 拍：延时开始，不运行，计数 0"
         },
         {
           "inputs": {
@@ -147,7 +165,8 @@
           "expect": {
             "BLOWER_RUN": false,
             "AERATION_BLOWER_CYCLE_COUNT": 0
-          }
+          },
+          "purpose": "延时第 2 拍：仍不运行"
         },
         {
           "inputs": {
@@ -157,7 +176,8 @@
           "expect": {
             "BLOWER_RUN": false,
             "AERATION_BLOWER_CYCLE_COUNT": 0
-          }
+          },
+          "purpose": "延时第 3 拍：仍不运行"
         },
         {
           "inputs": {
@@ -167,7 +187,8 @@
           "expect": {
             "BLOWER_RUN": false,
             "AERATION_BLOWER_CYCLE_COUNT": 0
-          }
+          },
+          "purpose": "延时第 4 拍：仍不运行"
         },
         {
           "inputs": {
@@ -177,7 +198,8 @@
           "expect": {
             "BLOWER_RUN": false,
             "AERATION_BLOWER_CYCLE_COUNT": 0
-          }
+          },
+          "purpose": "延时第 5 拍：仍不运行"
         },
         {
           "inputs": {
@@ -187,7 +209,8 @@
           "expect": {
             "BLOWER_RUN": true,
             "AERATION_BLOWER_CYCLE_COUNT": 1
-          }
+          },
+          "purpose": "延时满 5s：运行，计数增至 1"
         },
         {
           "inputs": {
@@ -197,7 +220,8 @@
           "expect": {
             "BLOWER_RUN": false,
             "AERATION_BLOWER_CYCLE_COUNT": 1
-          }
+          },
+          "purpose": "DO_LOW 撤销：风机立即停止，计数保持 1"
         },
         {
           "inputs": {
@@ -207,8 +231,20 @@
           "expect": {
             "BLOWER_RUN": false,
             "AERATION_BLOWER_CYCLE_COUNT": 1
-          }
+          },
+          "purpose": "DO_LOW 恢复：延时重新从 0 计时，当拍不运行，计数仍为 1"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。延时定时器未启动，循环计数 0；任务周期 1s，延时 5s。",
+      "coverage": [
+        "需求消失后风机立即停止并复位延时",
+        "复位后重新计时，不继承上一次的计时进度",
+        "循环计数保持累计值，不因停机清零"
+      ],
+      "specRefs": [
+        "P1",
+        "P2",
+        "P3"
       ]
     }
   ],

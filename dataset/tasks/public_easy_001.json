@@ -116,7 +116,8 @@
             "packingConfirmButton": false,
             "finishedButton": false
           },
-          "expect": {}
+          "expect": {},
+          "purpose": "初始化：无瓶信号，各工位输出关闭"
         },
         {
           "inputs": {
@@ -127,7 +128,8 @@
             "packingConfirmButton": false,
             "finishedButton": false
           },
-          "expect": {}
+          "expect": {},
+          "purpose": "检测到瓶子的当拍尚未启动清洗泵（下一拍生效）"
         },
         {
           "inputs": {
@@ -140,7 +142,8 @@
           },
           "expect": {
             "Pump_Motor": true
-          }
+          },
+          "purpose": "下一拍启动清洗泵，其余工位保持关闭"
         },
         {
           "inputs": {
@@ -153,7 +156,8 @@
           },
           "expect": {
             "Pump_Motor": true
-          }
+          },
+          "purpose": "清洗确认有效当拍维持清洗泵，工位尚未切换"
         },
         {
           "inputs": {
@@ -166,7 +170,8 @@
           },
           "expect": {
             "Filling_Valve": true
-          }
+          },
+          "purpose": "确认撤销后进入灌装：清洗泵停、灌装阀开"
         },
         {
           "inputs": {
@@ -179,7 +184,8 @@
           },
           "expect": {
             "Filling_Valve": true
-          }
+          },
+          "purpose": "灌装确认有效当拍保持灌装阀"
         },
         {
           "inputs": {
@@ -192,7 +198,8 @@
           },
           "expect": {
             "Capping_Machine": true
-          }
+          },
+          "purpose": "确认撤销后进入封盖：灌装阀关、封盖机开"
         },
         {
           "inputs": {
@@ -205,7 +212,8 @@
           },
           "expect": {
             "Capping_Machine": true
-          }
+          },
+          "purpose": "封盖确认有效当拍保持封盖机"
         },
         {
           "inputs": {
@@ -218,7 +226,8 @@
           },
           "expect": {
             "Packing_Machine": true
-          }
+          },
+          "purpose": "确认撤销后进入打包：封盖机停、打包机开"
         },
         {
           "inputs": {
@@ -231,7 +240,8 @@
           },
           "expect": {
             "Packing_Machine": true
-          }
+          },
+          "purpose": "打包确认有效当拍保持打包机"
         },
         {
           "inputs": {
@@ -244,7 +254,8 @@
           },
           "expect": {
             "Completion_Light": true
-          }
+          },
+          "purpose": "确认撤销后点亮完成指示灯"
         },
         {
           "inputs": {
@@ -257,7 +268,8 @@
           },
           "expect": {
             "Completion_Light": true
-          }
+          },
+          "purpose": "取走确认有效当拍保持完成指示灯"
         },
         {
           "inputs": {
@@ -268,8 +280,24 @@
             "packingConfirmButton": false,
             "finishedButton": false
           },
-          "expect": {}
+          "expect": {},
+          "purpose": "取走确认撤销后指示灯熄灭，流程回到起点"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。尚无可检测的瓶子，所有工位关闭。",
+      "coverage": [
+        "检测到瓶子后启动清洗泵（正常流程入口）",
+        "按确认按钮顺序推进：清洗→灌装→封盖→打包→完成指示灯",
+        "工位切换时的互斥：进入下一工位时上一工位输出撤销",
+        "确认信号有效当拍维持当前工位，撤销后才切换",
+        "取走确认后熄灭指示灯，回到可接收下一个瓶子的状态"
+      ],
+      "specRefs": [
+        "P1",
+        "P2",
+        "P3",
+        "P4",
+        "P5"
       ]
     }
   ],

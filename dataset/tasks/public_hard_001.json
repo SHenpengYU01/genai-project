@@ -140,7 +140,8 @@
           },
           "expect": {
             "error": false
-          }
+          },
+          "purpose": "无操作：error=FALSE"
         },
         {
           "inputs": {
@@ -166,7 +167,8 @@
                 "productionTemperature": 120.0
               }
             ]
-          }
+          },
+          "purpose": "addRecipe 有效：recipe[1] 写入 ID=1 的配方，recipeAdded 置位"
         },
         {
           "inputs": {
@@ -189,8 +191,18 @@
               "productionTemperature": 120.0
             },
             "error": false
-          }
+          },
+          "purpose": "按 ID=1 查询：recipeQueryResult 返回录入的字段值"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。配方表 10 个槽位全部为空。",
+      "coverage": [
+        "空表时执行操作不报错（P1 无错误时 status=0）",
+        "添加配方：写入存储并置 recipeAdded",
+        "按 recipeID 查询返回已录入的配方内容"
+      ],
+      "specRefs": [
+        "P1"
       ]
     },
     {
@@ -214,7 +226,8 @@
           "expect": {
             "recipeAdded": true,
             "error": false
-          }
+          },
+          "purpose": "addRecipe 写入 ID=1：成功"
         },
         {
           "inputs": {
@@ -232,7 +245,8 @@
           "expect": {
             "recipeAdded": false,
             "error": false
-          }
+          },
+          "purpose": "addRecipe 撤销：recipeAdded 保持 FALSE，无错误"
         },
         {
           "inputs": {
@@ -251,8 +265,19 @@
             "recipeAdded": false,
             "error": true,
             "status": 32770
-          }
+          },
+          "purpose": "再次添加相同 ID：报 16#8002，recipeAdded=FALSE"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。配方表为空。",
+      "coverage": [
+        "首次添加成功",
+        "撤销 addRecipe 后不再置位 recipeAdded",
+        "重复 ID 添加报 16#8002（P2 错误码集合）"
+      ],
+      "specRefs": [
+        "P1",
+        "P2"
       ]
     }
   ],

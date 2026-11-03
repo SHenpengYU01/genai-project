@@ -14,6 +14,12 @@ Driver structure (one scan per test step, with ``repeat`` handled):
 Results: CI_TEST_DRIVER.done / .allPass / .passCnt / .failCnt /
 .firstFailTc / .firstFailStep, read back over the online API.
 
+With ``generate(task, trace=True)`` the driver additionally records the actual
+value of every output leaf (and of asserted inout leaves) at the end of each
+step into ``tr_<name> : ARRAY[0..steps-1]`` variables plus a step counter
+``si``; the values are read back symbol-by-symbol after the run (used by
+``dataset/render_cases.py`` to fill the "实际输出" column).
+
 Test-case array values are 0-indexed and map to LOWER_BOUND + i. Only keys
 present in ``expect`` are compared.
 """
@@ -106,6 +112,111 @@ def _mismatch_exprs(actual, value, tinfo, duts_map):
     return out
 
 
+def _leaf_pairs(actual, value, tinfo, duts_map):
+    """Flatten an asserted value into [(st_expr, st_type, python_value)]."""
+    k = tinfo['kind']
+    if k == 'scalar':
+        return [(actual, tinfo['type'], value)]
+    if k == 'struct':
+        out = []
+        for f, fv in value.items():
+            ft = duts_map[tinfo['name']][f]
+            out += _leaf_pairs("%s.%s" % (actual, f), fv,
+                               _classify(ft, set(duts_map)), duts_map)
+        return out
+    lo = tinfo['bounds'][0] if tinfo['bounds'] else 1
+    out = []
+    for j, ev in enumerate(value):
+        out += _leaf_pairs("%s[%d]" % (actual, lo + j), ev,
+                           tinfo['elem'], duts_map)
+    return out
+
+
+def _leaves_of(actual, tinfo, duts_map):
+    """Flatten a typed output/inout without a sample value (bounds must exist)."""
+    k = tinfo['kind']
+    if k == 'scalar':
+        return [(actual, tinfo['type'])]
+    if k == 'struct':
+        out = []
+        for f, ft in duts_map[tinfo['name']].items():
+            out += _leaves_of("%s.%s" % (actual, f),
+                              _classify(ft, set(duts_map)), duts_map)
+        return out
+    if tinfo['bounds'] is None:          # ARRAY[*] needs a sample to size it
+        return []
+    out = []
+    for i in range(tinfo['bounds'][0], tinfo['bounds'][1] + 1):
+        out += _leaves_of("%s[%d]" % (actual, i), tinfo['elem'], duts_map)
+    return out
+
+
+def _trace_name(expr):
+    """fb[tc].Motor -> tr_Motor ; io_pumpGroup[tc][1].RunComd -> tr_pumpGroup_1_RunComd"""
+    if expr.startswith("fb[tc]."):
+        rest = expr[len("fb[tc]."):]
+    elif expr.startswith("io_"):
+        rest = expr[3:]
+        if "[tc]" in rest:
+            head, tail = rest.split("[tc]", 1)
+            rest = head + tail
+    else:
+        rest = expr
+    for ch in "[].":
+        rest = rest.replace(ch, "_")
+    while "__" in rest:          # CODESYS 对连续下划线不友好，压成单个
+        rest = rest.replace("__", "_")
+    return "tr_%s" % rest.strip("_")
+
+
+def trace_specs(task):
+    """Leaves to record while tracing: all outputs + asserted inout leaves.
+
+    Returns a list of dicts {var, expr, type, path}; `path` is the readable
+    key used in the test-case document (e.g. ``pumpGroup[1].RunComd``).
+    """
+    itf = task['interface']
+    duts = {d['name']: {f['name']: f['type'] for f in d.get('fields', [])}
+            for d in itf.get('duts', [])}
+    struct_names = set(duts)
+    out_info = {e['name']: _classify(e['type'], struct_names)
+                for e in itf['outputs']}
+    io_info = {e['name']: _classify(e['type'], struct_names)
+               for e in itf['inouts']}
+
+    pairs = []      # (expr, st_type, path)
+    for name, tinfo in out_info.items():
+        for expr, st_type in _leaves_of("fb[tc].%s" % name, tinfo, duts):
+            path = expr[len("fb[tc]."):]
+            pairs.append((expr, st_type, path))
+    asserted = {}
+    for tc in task['test_cases']:
+        for st in tc['steps']:
+            for key, val in st['expect'].items():
+                if key in io_info:
+                    for e, t, _ in _leaf_pairs("io_%s[tc]" % key, val,
+                                               io_info[key], duts):
+                        asserted[e] = t
+    for expr, st_type in asserted.items():
+        path = expr.replace("io_", "", 1).replace("[tc]", "", 1)
+        pairs.append((expr, st_type, path))
+
+    specs, seen = [], {}
+    for expr, st_type, path in pairs:
+        var = _trace_name(expr)
+        if var in seen:
+            if seen[var] == expr:
+                continue
+            n = 2
+            while "%s_%d" % (var, n) in seen:
+                n += 1
+            var = "%s_%d" % (var, n)
+        seen[var] = expr
+        specs.append({"var": var, "expr": expr, "type": st_type,
+                      "path": path})
+    return specs
+
+
 def _concrete_type(name, tinfo, entry, test_cases):
     if tinfo['kind'] != 'array' or tinfo['bounds'] is not None:
         return entry['type'].strip()
@@ -120,7 +231,7 @@ def _concrete_type(name, tinfo, entry, test_cases):
     return "ARRAY[1..%d] OF %s" % (cap, elem)
 
 
-def generate(task):
+def generate(task, trace=False):
     fb = task['pou']['name']
     itf = task['interface']
     duts = {d['name']: {f['name']: f['type'] for f in d.get('fields', [])}
@@ -130,6 +241,8 @@ def generate(task):
     outputs = itf['outputs']
     inouts = itf['inouts']
     cases = task['test_cases']
+    specs = trace_specs(task) if trace else []
+    n_steps_total = sum(len(c['steps']) for c in cases)
 
     in_info = {e['name']: _classify(e['type'], struct_names) for e in inputs}
     out_info = {e['name']: _classify(e['type'], struct_names) for e in outputs}
@@ -155,6 +268,11 @@ def generate(task):
     a("    curRepeat : INT := 1;")
     a("    curLen : INT := 0;")
     a("    stepFail : BOOL;")
+    if trace:
+        a("    si : INT := 0;")
+        for sp in specs:
+            a("    %s : ARRAY[0..%d] OF %s;"
+              % (sp['var'], max(n_steps_total - 1, 0), sp['type']))
     for e in inputs:
         a("    v_%s : %s;" % (e['name'], e['type']))
     for e in inouts:
@@ -239,6 +357,10 @@ def generate(task):
     a("        ELSE")
     a("            passCnt := passCnt + 1;")
     a("        END_IF")
+    if trace:
+        for sp in specs:
+            a("        %s[si] := %s;" % (sp['var'], sp['expr']))
+        a("        si := si + 1;")
     a("        repCnt := 0;")
     a("        step := step + 1;")
     a("        IF step >= curLen THEN")

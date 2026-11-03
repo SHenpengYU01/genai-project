@@ -80,7 +80,8 @@
             "pump1Run": true,
             "pump2Run": false,
             "pump3Run": false
-          }
+          },
+          "purpose": "压力 8 < 9：投入 1 号泵，2、3 号不运行"
         },
         {
           "inputs": {
@@ -92,7 +93,8 @@
             "pump1Run": true,
             "pump2Run": true,
             "pump3Run": false
-          }
+          },
+          "purpose": "压力仍为 8：追加 2 号泵（分级投切）"
         },
         {
           "inputs": {
@@ -104,8 +106,18 @@
             "pump1Run": true,
             "pump2Run": true,
             "pump3Run": true
-          }
+          },
+          "purpose": "压力仍为 8：3 号泵投入，三台全运行"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。三台泵均未运行；设定值 10、死区 1。",
+      "coverage": [
+        "压力低于 设定值-死区 时投入第 1 台泵（P1）",
+        "压力仍偏低时逐台加泵",
+        "三台全部投入"
+      ],
+      "specRefs": [
+        "P1"
       ]
     }
   ],

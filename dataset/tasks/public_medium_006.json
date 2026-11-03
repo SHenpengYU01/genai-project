@@ -98,7 +98,8 @@
           "expect": {
             "THICKNESS_ALARM": false,
             "Slab_Fault_Counter": 0
-          }
+          },
+          "purpose": "初始无故障：THICKNESS_ALARM=FALSE，计数 0"
         },
         {
           "inputs": {
@@ -118,8 +119,20 @@
               0,
               0
             ]
-          }
+          },
+          "purpose": "故障且信号有效：报警置位、计数 1、历史首项写入 100"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。无故障、信号有效；历史缓冲区为空。",
+      "coverage": [
+        "无故障时不报警、不计数",
+        "故障时报警置位并计数 +1",
+        "故障时间戳写入历史记录首项",
+        "无故障时报警关闭（P1/P2 的一致性）"
+      ],
+      "specRefs": [
+        "P1",
+        "P2"
       ]
     },
     {
@@ -138,8 +151,17 @@
           "expect": {
             "THICKNESS_ALARM": false,
             "Slab_Fault_Counter": 0
-          }
+          },
+          "purpose": "故障信号存在但 THICKNESS_SIGNAL_VALID=FALSE：不报警、计数保持 0"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。历史缓冲区为空；信号有效性标志为 FALSE。",
+      "coverage": [
+        "信号无效时即使有故障也不报警（P1）",
+        "信号无效时不计数、不写历史"
+      ],
+      "specRefs": [
+        "P1"
       ]
     }
   ],

@@ -82,7 +82,8 @@
           "expect": {
             "Weld_Soft_Start_Active": true,
             "Operator_Alert": false
-          }
+          },
+          "purpose": "抑制期累计 200×20ms=4s：间隙一直超限也不报警，抑制标志有效"
         },
         {
           "inputs": {
@@ -94,7 +95,8 @@
           "expect": {
             "Weld_Soft_Start_Active": false,
             "Operator_Alert": false
-          }
+          },
+          "purpose": "上电 5s 抑制期在本步结束，之后去抖仅累计 0.2s：仍未达报警阈值，不报警"
         },
         {
           "inputs": {
@@ -105,7 +107,8 @@
           "repeat": 50,
           "expect": {
             "Operator_Alert": true
-          }
+          },
+          "purpose": "去抖累计超过 1s（0.2s + 1.0s）：间隙仍超限，报警置位"
         },
         {
           "inputs": {
@@ -116,8 +119,21 @@
           "repeat": 1,
           "expect": {
             "Operator_Alert": false
-          }
+          },
+          "purpose": "间隙信号恢复：报警立即撤销"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。软启动抑制期从第一拍开始；去抖时间 1s，任务周期 20ms。",
+      "coverage": [
+        "初始化抑制期内即使间隙超限也不报警（P2）",
+        "抑制期结束后的去抖过程",
+        "去抖满足（1s）后报警（P1 的报警条件）",
+        "间隙恢复后报警立即撤销（P3 报警意味着间隙当前超限）"
+      ],
+      "specRefs": [
+        "P2",
+        "P3",
+        "P4"
       ]
     },
     {
@@ -135,8 +151,18 @@
           "expect": {
             "Weld_Soft_Start_Active": true,
             "Operator_Alert": false
-          }
+          },
+          "purpose": "急停断开、间隙超限：抑制期内报警保持关闭"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。急停回路（NC）已断开，即 Weld_E_Stop_NC=FALSE。",
+      "coverage": [
+        "急停时抑制标志之外也不允许报警（P1 优先级）",
+        "急停与抑制期的组合：两者都要求无报警"
+      ],
+      "specRefs": [
+        "P1",
+        "P2"
       ]
     }
   ],

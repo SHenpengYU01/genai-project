@@ -130,7 +130,8 @@
                 "RunComd": false
               }
             ]
-          }
+          },
+          "purpose": "未按下 start：5 台泵 RunComd 全为 FALSE（含被选中的 1、3 号）"
         },
         {
           "inputs": {
@@ -178,8 +179,20 @@
                 "RunComd": false
               }
             ]
-          }
+          },
+          "purpose": "start 有效、手动模式：selection=TRUE 的 1、3 号泵运行，2、4、5 号不运行"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。泵组 5 台，输入侧给出 priority/selection；运行命令尚未计算。",
+      "coverage": [
+        "停止状态下所有泵不运行",
+        "手动模式下按 selection 选择：选中的 1、3 号泵运行（P2）",
+        "未选中的泵不运行（P3）",
+        "选择依据是 selection 而不是 priority"
+      ],
+      "specRefs": [
+        "P2",
+        "P3"
       ]
     },
     {
@@ -233,8 +246,17 @@
                 "RunComd": true
               }
             ]
-          }
+          },
+          "purpose": "自动模式 + start：priority 5/4/3 对应的 1、3、5 号泵运行，2、4 号不运行"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。泵组 5 台，priority 5/1/4/2/3，全部 selection=FALSE。",
+      "coverage": [
+        "自动模式按 priority 选出优先级最高的 3 台",
+        "选择结果按优先级而不是下标：1、3、5 号泵运行"
+      ],
+      "specRefs": [
+        "P1"
       ]
     },
     {
@@ -288,7 +310,8 @@
                 "RunComd": true
               }
             ]
-          }
+          },
+          "purpose": "自动模式 + start：3 台高优先级泵运行"
         },
         {
           "inputs": {
@@ -336,8 +359,17 @@
                 "RunComd": false
               }
             ]
-          }
+          },
+          "purpose": "stop 与 start 同时有效：5 台泵全部停止，验证停止优先"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。泵组 5 台，priority 5/1/4/2/3，全部 selection=FALSE。",
+      "coverage": [
+        "自动模式下 3 台泵运行",
+        "stop 优先于 start：所有泵停止（P1）"
+      ],
+      "specRefs": [
+        "P1"
       ]
     }
   ],

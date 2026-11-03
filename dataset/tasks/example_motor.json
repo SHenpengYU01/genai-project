@@ -3,7 +3,10 @@
   "source": "self_built",
   "difficulty": "easy",
   "title": "电机启停控制",
-  "pou": { "type": "function_block", "name": "MotorCtrl" },
+  "pou": {
+    "type": "function_block",
+    "name": "MotorCtrl"
+  },
   "requirement": {
     "zh": "设计一个电机启停控制功能块，包含启动按钮 StartBtn、停止按钮 StopBtn、急停信号 EStop 三个布尔输入，以及电机运行状态 Motor 一个布尔输出。系统初始化时电机处于停止状态。当启动按钮按下，且停止按钮和急停信号均未触发时，电机启动；启动按钮松开后，电机保持运行状态。当停止按钮按下或急停信号触发时，电机停止，且停止和急停的优先级高于启动。",
     "en": "Design a motor start/stop function block with three boolean inputs StartBtn, StopBtn, EStop and one boolean output Motor. The motor is initially stopped. When StartBtn is pressed and neither StopBtn nor EStop is active, the motor starts; after StartBtn is released the motor stays running. When StopBtn is pressed or EStop is active, the motor stops, and stop/e-stop take priority over start."
@@ -11,41 +14,203 @@
   "interface": {
     "duts": [],
     "inputs": [
-      { "name": "StartBtn", "type": "BOOL", "desc": "启动按钮" },
-      { "name": "StopBtn", "type": "BOOL", "desc": "停止按钮" },
-      { "name": "EStop", "type": "BOOL", "desc": "急停信号" }
+      {
+        "name": "StartBtn",
+        "type": "BOOL",
+        "desc": "启动按钮"
+      },
+      {
+        "name": "StopBtn",
+        "type": "BOOL",
+        "desc": "停止按钮"
+      },
+      {
+        "name": "EStop",
+        "type": "BOOL",
+        "desc": "急停信号"
+      }
     ],
     "outputs": [
-      { "name": "Motor", "type": "BOOL", "desc": "电机运行状态" }
+      {
+        "name": "Motor",
+        "type": "BOOL",
+        "desc": "电机运行状态"
+      }
     ],
     "inouts": []
   },
   "ltl_specs": [
-    { "id": "P1", "description": "停止安全性：停止按钮或急停信号触发时，电机必须停止。",
-      "formula": "G((StopBtn || EStop) -> X(!Motor))" },
-    { "id": "P2", "description": "正常启动：启动按下且无停止/急停时，电机必须启动。",
-      "formula": "G((StartBtn && !StopBtn && !EStop) -> X(Motor))" }
+    {
+      "id": "P1",
+      "description": "停止安全性：停止按钮或急停信号触发时，电机必须停止。",
+      "formula": "G((StopBtn || EStop) -> X(!Motor))"
+    },
+    {
+      "id": "P2",
+      "description": "正常启动：启动按下且无停止/急停时，电机必须启动。",
+      "formula": "G((StartBtn && !StopBtn && !EStop) -> X(Motor))"
+    }
   ],
   "test_cases": [
-    { "id": "TC1", "description": "正常启动与保持", "scan_ms": 10,
+    {
+      "id": "TC1",
+      "description": "正常启动与保持",
+      "scan_ms": 10,
       "steps": [
-        { "inputs": { "StartBtn": false, "StopBtn": false, "EStop": false }, "expect": { "Motor": false } },
-        { "inputs": { "StartBtn": true,  "StopBtn": false, "EStop": false }, "expect": { "Motor": true } },
-        { "inputs": { "StartBtn": false, "StopBtn": false, "EStop": false }, "expect": { "Motor": true } }
-      ] },
-    { "id": "TC2", "description": "停止优先于启动", "scan_ms": 10,
+        {
+          "inputs": {
+            "StartBtn": false,
+            "StopBtn": false,
+            "EStop": false
+          },
+          "expect": {
+            "Motor": false
+          },
+          "purpose": "初始化：无启动信号，电机停止"
+        },
+        {
+          "inputs": {
+            "StartBtn": true,
+            "StopBtn": false,
+            "EStop": false
+          },
+          "expect": {
+            "Motor": true
+          },
+          "purpose": "启动按钮按下且无停止/急停：电机启动"
+        },
+        {
+          "inputs": {
+            "StartBtn": false,
+            "StopBtn": false,
+            "EStop": false
+          },
+          "expect": {
+            "Motor": true
+          },
+          "purpose": "松开启动按钮：电机保持运行（自保持）"
+        }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。电机处于停止状态；三个按钮均未按下。",
+      "coverage": [
+        "初始化后保持停止",
+        "满足条件时启动（P2）",
+        "松开启动按钮后自保持运行"
+      ],
+      "specRefs": [
+        "P2"
+      ]
+    },
+    {
+      "id": "TC2",
+      "description": "停止优先于启动",
+      "scan_ms": 10,
       "steps": [
-        { "inputs": { "StartBtn": true,  "StopBtn": false, "EStop": false }, "expect": { "Motor": true } },
-        { "inputs": { "StartBtn": true,  "StopBtn": true,  "EStop": false }, "expect": { "Motor": false } },
-        { "inputs": { "StartBtn": true,  "StopBtn": false, "EStop": false }, "expect": { "Motor": true } }
-      ] },
-    { "id": "TC3", "description": "急停优先并复位", "scan_ms": 10,
+        {
+          "inputs": {
+            "StartBtn": true,
+            "StopBtn": false,
+            "EStop": false
+          },
+          "expect": {
+            "Motor": true
+          },
+          "purpose": "启动按钮有效：电机启动"
+        },
+        {
+          "inputs": {
+            "StartBtn": true,
+            "StopBtn": true,
+            "EStop": false
+          },
+          "expect": {
+            "Motor": false
+          },
+          "purpose": "停止按钮也有效：电机停止，验证停止优先于启动"
+        },
+        {
+          "inputs": {
+            "StartBtn": true,
+            "StopBtn": false,
+            "EStop": false
+          },
+          "expect": {
+            "Motor": true
+          },
+          "purpose": "松开停止、启动仍有效：电机重新运行"
+        }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。电机处于停止状态。",
+      "coverage": [
+        "启动后运行",
+        "停止与启动同时有效时停止优先（P1）",
+        "松开停止后可再次启动"
+      ],
+      "specRefs": [
+        "P1",
+        "P2"
+      ]
+    },
+    {
+      "id": "TC3",
+      "description": "急停优先并复位",
+      "scan_ms": 10,
       "steps": [
-        { "inputs": { "StartBtn": false, "StopBtn": false, "EStop": false }, "expect": { "Motor": false } },
-        { "inputs": { "StartBtn": true,  "StopBtn": false, "EStop": false }, "expect": { "Motor": true } },
-        { "inputs": { "StartBtn": false, "StopBtn": false, "EStop": true  }, "expect": { "Motor": false } },
-        { "inputs": { "StartBtn": false, "StopBtn": false, "EStop": false }, "expect": { "Motor": false } }
-      ] }
+        {
+          "inputs": {
+            "StartBtn": false,
+            "StopBtn": false,
+            "EStop": false
+          },
+          "expect": {
+            "Motor": false
+          },
+          "purpose": "初始化：电机停止"
+        },
+        {
+          "inputs": {
+            "StartBtn": true,
+            "StopBtn": false,
+            "EStop": false
+          },
+          "expect": {
+            "Motor": true
+          },
+          "purpose": "启动按钮按下：电机启动"
+        },
+        {
+          "inputs": {
+            "StartBtn": false,
+            "StopBtn": false,
+            "EStop": true
+          },
+          "expect": {
+            "Motor": false
+          },
+          "purpose": "触发急停：电机立即停止"
+        },
+        {
+          "inputs": {
+            "StartBtn": false,
+            "StopBtn": false,
+            "EStop": false
+          },
+          "expect": {
+            "Motor": false
+          },
+          "purpose": "急停解除且无启动信号：保持停止，需重新启动"
+        }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。电机处于停止状态；急停未触发。",
+      "coverage": [
+        "运行中触发急停立即停止（P1）",
+        "急停有效期间启动无效",
+        "急停解除后无启动信号时保持停止"
+      ],
+      "specRefs": [
+        "P1"
+      ]
+    }
   ],
   "reference": {
     "duts": [],

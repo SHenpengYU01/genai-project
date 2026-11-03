@@ -87,7 +87,8 @@
           "expect": {
             "elementCount": 0,
             "status": 0
-          }
+          },
+          "purpose": "reset：队列清空，elementCount=0"
         },
         {
           "inputs": {
@@ -102,7 +103,8 @@
             "buffer": [
               5
             ]
-          }
+          },
+          "purpose": "enqueue 且 item=5：入队，计数 1，buffer[1]=5"
         },
         {
           "inputs": {
@@ -114,7 +116,8 @@
           "expect": {
             "elementCount": 1,
             "status": 0
-          }
+          },
+          "purpose": "取消 enqueue（item 改 7）：不入队，计数保持 1"
         },
         {
           "inputs": {
@@ -126,7 +129,8 @@
           "expect": {
             "elementCount": 2,
             "status": 0
-          }
+          },
+          "purpose": "再次 enqueue：item=7 入队，计数 2"
         },
         {
           "inputs": {
@@ -139,8 +143,21 @@
             "elementCount": 1,
             "status": 0,
             "item": 5
-          }
+          },
+          "purpose": "dequeue：取出最早元素 5，计数回 1"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。队列为空；缓冲区容量由测试数据推定为 10。",
+      "coverage": [
+        "reset 清空队列",
+        "入队写入缓冲区并计数 +1",
+        "未请求入队的拍计数不变",
+        "连续入队计数累加",
+        "出队返回最早入队的元素（FIFO 顺序）",
+        "元素数不越界（P1）"
+      ],
+      "specRefs": [
+        "P1"
       ]
     },
     {
@@ -157,7 +174,8 @@
           },
           "expect": {
             "elementCount": 0
-          }
+          },
+          "purpose": "reset：队列为空"
         },
         {
           "inputs": {
@@ -169,8 +187,18 @@
           "expect": {
             "elementCount": 0,
             "status": 32769
-          }
+          },
+          "purpose": "空队列 dequeue：status=16#8001，elementCount 保持 0，不发生下溢"
         }
+      ],
+      "initialState": "新建功能块实例，内部状态与输出全部清零；输入取下表周期 0 的取值。队列为空；缓冲区容量 10。",
+      "coverage": [
+        "空队列出队报 16#8001（P2）",
+        "出错时计数不发生下溢"
+      ],
+      "specRefs": [
+        "P1",
+        "P2"
       ]
     }
   ],
