@@ -1,7 +1,7 @@
 # Stateless batch ST compile worker for CODESYS.
 #
 # Invocation (via run_compile.bat):
-#   CODESYS.exe --profile=... --runscript=compile_worker.py
+#   CODESYS.exe --profile=... --runscript=worker.py
 #               --scriptargs:'<request.json> <response.json>' --noUI
 #
 # IMPORTANT compiler behaviour (verified on CODESYS 3.5 SP22 P4):
@@ -50,7 +50,7 @@ REQ = sys.argv[1] if len(sys.argv) > 1 else None
 RESP = sys.argv[2] if len(sys.argv) > 2 else None
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE = os.path.join(HERE, "template.project")
+TEMPLATE = os.path.join(os.path.dirname(HERE), "template.project")
 WORKDIR = os.path.join(HERE, "work")
 # NOTE: CODESYS rejects identifiers starting with underscores ("identifier is
 # not valid for this object"), so the harness and its locals use letter-first
@@ -519,7 +519,7 @@ def run_job(job, seq):
 
 def main():
     if not REQ or not RESP:
-        raise RuntimeError("usage: compile_worker.py <request.json> <response.json>")
+        raise RuntimeError("usage: worker.py <request.json> <response.json>")
     if not System.IO.File.Exists(TEMPLATE):
         raise RuntimeError("template project missing: " + TEMPLATE)
 

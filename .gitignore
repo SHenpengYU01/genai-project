@@ -18,9 +18,10 @@ __pycache__/
 *.precompilecache
 *.simulation.*
 
-# 编译服务临时目录（生成的工程副本、请求/响应文件）
-tool/work/
-tester/work/
+# CODESYS 服务临时目录（生成的工程副本、请求/响应文件）
+codesys/work/
+codesys/compile/work/
+codesys/simulate/work/
 
 # 实验运行日志（结果按需单独保存/汇总进报告）
 experiments/runs/
@@ -29,5 +30,5 @@ experiments/runs/
 dataset/.cache/
 
 # 临时探测脚本
-tool/_probe*.py
-tool/_run_probe*.bat
+codesys/_probe*.py
+codesys/_run_probe*.bat

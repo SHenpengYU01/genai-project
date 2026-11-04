@@ -20,8 +20,8 @@ harness 相同的客户端接口（`chat(messages)`），因此**提示内容、
 |---|---|---|
 | 题目提示 | 同一份（需求/接口/LTL） | 同一份（拼接为单条 prompt） |
 | 修复反馈 | 编译错误/测试失败，最多 5 轮 | 同一反馈文本，最多 5 轮 |
-| 编译 | `tool/codesys_build` 同一模板/worker | 同左 |
-| 行为测试 | `tester/` CODESYS 仿真 | 同左 |
+| 编译 | `codesys/compile` 同一模板/worker | 同左 |
+| 行为测试 | `codesys/simulate` CODESYS 仿真 | 同左 |
 | 生成方式 | 单次 LLM 调用 | Codex 自身 agent 循环（工具、规划等） |
 
 > Codex 在 read-only 沙箱中运行，无法修改工作区文件；提示要求"只输出代码块"，

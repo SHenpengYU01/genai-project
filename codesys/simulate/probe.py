@@ -1,6 +1,6 @@
-"""Debug: run one task and read actual values of FB outputs/inouts.
+"""单题调试：跑一题（第一组用例），并读回任意符号的实测值。
 
-Usage: python tester/debug_task.py <task.json> <symbol1,symbol2,...>
+Usage: python codesys/simulate/probe.py <task.json> <symbol1,symbol2,...>
 Symbols are read after the driver finishes, e.g.
 CI_TEST_DRIVER.fb[0].ipValue
 """
@@ -10,12 +10,12 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import driver_gen  # noqa: E402
-import run as runner  # noqa: E402
+import driver  # noqa: E402
+import runner  # noqa: E402
 
 
 def main():
-    root = os.path.dirname(HERE)
+    root = os.path.dirname(os.path.dirname(HERE))
     task = json.load(open(os.path.join(root, "dataset", "tasks", sys.argv[1]),
                            encoding="utf-8"))
     symbols = sys.argv[2].split(",") if len(sys.argv) > 2 else []
@@ -29,9 +29,9 @@ def main():
     sm = cases[0].get("scan_ms", 10)
     sub = dict(task)
     sub["test_cases"] = [c for c in cases if c.get("scan_ms", 10) == sm]
-    driver = driver_gen.generate(sub)
+    driver_text = driver.generate(sub)
     req = {"id": task["id"], "scan_ms": sm, "duts": duts, "pous": pous,
-           "driver": driver, "debug_reads": symbols}
+           "driver": driver_text, "debug_reads": symbols}
     resp = runner._run_sim(req)
     print(json.dumps(resp, ensure_ascii=False, indent=1))
 

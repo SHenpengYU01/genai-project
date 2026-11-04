@@ -3,7 +3,7 @@
 For every task this script:
 
 1. runs the task's reference implementation once in CODESYS simulation with
-   per-step tracing (``tester.run.run_task(..., trace=True)``), so the document
+   per-step tracing (``codesys/simulate/runner.run_task(..., trace=True)``), so the document
    can show the *actual* output value of every scan step;
 2. renders one block per test case in the layout required by the assignment's
    「测试用例模板与示例」: 名称 / 所属题目 / 初始状态 / 输入与步骤 / 预期输出 /
@@ -28,10 +28,10 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-sys.path.insert(0, os.path.join(ROOT, "tester"))
+sys.path.insert(0, os.path.join(ROOT, "codesys", "simulate"))
 
-import driver_gen  # noqa: E402
-import run as tester_run  # noqa: E402
+import driver  # noqa: E402
+import runner  # noqa: E402
 
 CACHE = os.path.join(HERE, ".cache", "tc_trace")
 RESULTS_CSV = os.path.join(ROOT, "experiments", "results.csv")
@@ -187,10 +187,10 @@ def trace_task(task, force=False):
             cached = json.load(f)
         if cached.get("_sig") == sig:
             return cached
-    pous, duts = tester_run.reference_pous(task)
+    pous, duts = runner.reference_pous(task)
     if not pous:
         raise RuntimeError("%s: no reference POU" % task["id"])
-    res = tester_run.run_task(task, pous, duts, trace=True)
+    res = runner.run_task(task, pous, duts, trace=True)
     res["_sig"] = sig
     os.makedirs(CACHE, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
@@ -247,28 +247,28 @@ def _expect_leaves(task, key, val, duts):
     itf = task["interface"]
     for e in itf["outputs"]:
         if e["name"] == key:
-            tinfo = driver_gen._classify(e["type"], struct_names)
+            tinfo = driver._classify(e["type"], struct_names)
             src = "fb[tc].%s" % key
             pre = "fb[tc]."
             break
     else:
         for e in itf["inouts"]:
             if e["name"] == key:
-                tinfo = driver_gen._classify(e["type"], struct_names)
+                tinfo = driver._classify(e["type"], struct_names)
                 src = "io_%s[tc]" % key
                 pre = "io_%s[tc]" % key
                 break
         else:
             return []
     leaves = []
-    for expr, st_type, ev in driver_gen._leaf_pairs(src, val, tinfo, duts):
+    for expr, st_type, ev in driver._leaf_pairs(src, val, tinfo, duts):
         path = _trace_path(expr)
         leaves.append((path, ev, st_type))
     return leaves
 
 
 def _trace_path(expr):
-    """Map a driver expression to the trace path used by driver_gen.trace_specs."""
+    """Map a driver expression to the trace path used by driver.trace_specs."""
     if expr.startswith("fb[tc]."):
         return expr[len("fb[tc]."):]
     if expr.startswith("io_"):

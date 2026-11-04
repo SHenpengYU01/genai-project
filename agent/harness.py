@@ -18,11 +18,12 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-sys.path.insert(0, os.path.join(ROOT, "tool"))
+sys.path.insert(0, os.path.join(ROOT, "codesys", "compile"))
+sys.path.insert(0, os.path.join(ROOT, "codesys", "simulate"))
 sys.path.insert(0, ROOT)
 
-from codesys_build import compile_jobs, CompileToolError  # noqa: E402
-from tester import run as tester_run  # noqa: E402
+from client import compile_jobs, CompileToolError  # noqa: E402
+import runner  # noqa: E402
 from agent import caller_gen, parser, prompt  # noqa: E402
 from agent.llm import (LLMError, MockClient, OpenAICompatClient,  # noqa: E402
                        resolve_model)
@@ -189,7 +190,7 @@ class Harness:
                             record["tests_passed"] = None
                             break
                         try:
-                            tres = tester_run.run_task(
+                            tres = runner.run_task(
                                 self.task, pous, duts)
                         except Exception as e:  # simulation infra failure
                             record["status"] = "tool_error"

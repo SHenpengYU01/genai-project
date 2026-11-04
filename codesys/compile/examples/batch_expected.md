@@ -1,5 +1,8 @@
 # examples/batch_all.json 预期结果（用于交付验收）
 
+运行：`python codesys/compile/client.py codesys/compile/examples/batch_all.json out.json`
+（或运行 `codesys/compile/run_examples.bat`，等价于在 `codesys/compile` 下执行 `python client.py examples/batch_all.json work/resp_batch.json`）
+
 | id | 内容 | 预期 passed | 预期 errors | 备注 |
 |----|------|------------|-------------|------|
 | 01_fb_good | 电机启停 FB（无任务引用，靠 auto_wire） | true | 0 | 验证自动接线能让独立 FB 被编译 |

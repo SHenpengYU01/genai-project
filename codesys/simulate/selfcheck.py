@@ -1,10 +1,9 @@
-"""Run every task's reference solution through the CODESYS-simulation tester.
+"""数据集自检：把每题的参考实现丢进 CODESYS 仿真跑一遍自己的测试用例。
 
-This is the dataset self-check: it validates that each task's reference
-implementation actually passes its own test cases (so the test cases and the
-tester are correct before being used on model-generated code).
+参考实现必须全部通过——否则说明测试用例、被测语义或仿真执行器之一有问题，
+在拿同一套用例去评模型之前必须先修好。
 
-Run:  python tester/run_all.py [id_filter ...]
+Run:  python codesys/simulate/selfcheck.py [id_filter ...]
 """
 import json
 import os
@@ -13,9 +12,9 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import run as runner  # noqa: E402
+import runner  # noqa: E402
 
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.dirname(os.path.dirname(HERE))
 TASKS_DIR = os.path.join(ROOT, "dataset", "tasks")
 
 

@@ -1,8 +1,7 @@
-"""Run a task's test cases against a POU (reference or model code) via CODESYS
-simulation.
+"""行为测试执行器：用 CODESYS 仿真跑一题的测试用例（参考实现或模型生成的代码）。
 
-Test cases are grouped by scan_ms; each group runs one simulation (one CODESYS
-cold start) with that cycle time, using a generated self-test driver.
+用例按 scan_ms 分组，每组起一次 CODESYS 冷启动，用生成的 ST 自测驱动在 PLC 内
+逐拍施加输入并断言输出。
 """
 import json
 import os
@@ -13,7 +12,7 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 RUN_BAT = os.path.join(HERE, "run_simulation.bat")
 sys.path.insert(0, HERE)
-import driver_gen  # noqa: E402
+import driver  # noqa: E402
 
 
 def _run_sim(request, timeout=600.0):
@@ -50,7 +49,7 @@ def _scalar_keys(task):
     keys = []
     for grp in ("outputs", "inouts"):
         for e in itf.get(grp, []):
-            if driver_gen._classify(e["type"], struct_names)["kind"] == "scalar":
+            if driver._classify(e["type"], struct_names)["kind"] == "scalar":
                 keys.append(e["name"])
     return keys
 
@@ -84,16 +83,16 @@ def run_task(task, pous, duts=None, trace=False):
     for sm in order:
         sub = dict(task)
         sub["test_cases"] = groups[sm]
-        driver = driver_gen.generate(sub, trace=trace)
+        driver_text = driver.generate(sub, trace=trace)
         n_steps = sum(len(c["steps"]) for c in groups[sm])
-        specs = driver_gen.trace_specs(sub) if trace else []
+        specs = driver.trace_specs(sub) if trace else []
         if trace:
             reads = ["CI_TEST_DRIVER.%s[%d]" % (sp["var"], i)
                      for sp in specs for i in range(n_steps)]
         else:
             reads = ["CI_TEST_DRIVER.fail_%s" % k for k in scalar_keys]
         req = {"id": task["id"], "scan_ms": sm, "duts": duts,
-               "pous": pous, "driver": driver,
+               "pous": pous, "driver": driver_text,
                "debug_reads": reads}
         resp = _run_sim(req)
         if not resp.get("ok"):

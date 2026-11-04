@@ -1,13 +1,13 @@
 """Regression test for the DUT / VAR_IN_OUT compile-service extensions.
 
-Run:  python examples/test_dut.py
+Run:  python codesys/compile/examples/test_dut.py
 Exit: 0 when all expectations hold, 1 otherwise.
 """
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from codesys_build import compile_jobs  # noqa: E402
+from client import compile_jobs  # noqa: E402
 
 ST_PUMP = (
     "TYPE ST_Pump :\n"

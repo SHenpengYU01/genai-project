@@ -7,8 +7,7 @@ CODESYS 仿真行为测试 → 结构化修复，并在 30 道 PLC 编程题上�
 
 | 目录 | 内容 |
 |------|------|
-| `tool/` | CODESYS 编译服务（CPython 客户端 + IronPython worker + 模板工程），DUT/Standard 库支持 |
-| `tester/` | 行为测试：ST 自测驱动生成 + CODESYS 仿真执行（在线 API） |
+| `codesys/` | CODESYS 平台接入（见 `codesys/README.md`），分两层：`compile/` 编译检查（CPython 客户端 + IronPython worker + 模板工程，DUT/Standard 库支持）；`simulate/` 行为测试（ST 自测驱动生成 + CODESYS 仿真执行） |
 | `dataset/` | 30 道题（20 公共 + 10 自建），含 LTL 规约、测试用例（含逐步测试目的/覆盖内容/关联规约）、可编译参考实现；schema、校验与用例文档渲染脚本 |
 | `agent/` | 自研 ST 生成 Agent harness（LLM 客户端、提示、解析、编译/测试反馈循环） |
 | `baseline/` | 现有框架基线：Codex CLI（经 DMXAPI responses 协议驱动，同一评测管线） |
@@ -30,13 +29,13 @@ python -m agent.llm          # 检查密钥/模型名是否就绪（只显示掩
 python -m agent.llm --list qwen   # 有 key 后列出可用模型 id
 
 # 1) 编译服务自检（7 个样例，含故意报错项）
-tool\run_tests.bat
+codesys\compile\run_examples.bat
 
 # 2) 数据集质量门槛：参考实现必须编译通过
 python dataset/check_references.py
 
 # 3) 数据集自检：参考实现必须通过自己的测试用例（CODESYS 仿真）
-python tester/run_all.py
+python codesys/simulate/selfcheck.py
 
 # 4) Agent 离线自测（无需 API key，回放 mock 输出）
 python experiments/build_mocks.py
@@ -65,10 +64,10 @@ python experiments/summarize.py experiments/runs/agent_2models
 | 数据集（公共 20 + 自建 10）与 schema | `dataset/tasks/`、`dataset/schema.md`、`dataset/build_*.py` |
 | 来源/改编/合理性/多样性说明 | 报告 §2.2–2.4；自建题 `meta.scenario` |
 | 逐题 LTL 规约（75 条） | `dataset/tasks/*.json` 的 `ltl_specs`；报告附录 A |
-| 逐题测试用例（54 组 / 199 步，含每步测试目的） | `report/测试用例.md`（按作业模板渲染）；数据 `dataset/tasks/*.json` 的 `test_cases`；说明文字 `dataset/tc_annotations.py`；执行器 `tester/` |
+| 逐题测试用例（54 组 / 199 步，含每步测试目的） | `report/测试用例.md`（按作业模板渲染）；数据 `dataset/tasks/*.json` 的 `test_cases`；说明文字 `dataset/tc_annotations.py`；执行器 `codesys/simulate/` |
 | 自研 Agent harness | `agent/`（见 `agent/README.md`） |
-| CODESYS 编译集成 | `tool/`（见 `tool/README.md`） |
-| 自动行为测试（加分项） | `tester/`（CODESYS 仿真 + 自测驱动） |
+| CODESYS 编译集成 | `codesys/compile/`（见 `codesys/compile/README.md`） |
+| 自动行为测试（加分项） | `codesys/simulate/`（CODESYS 仿真 + 自测驱动，见 `codesys/README.md`） |
 | 现有框架基线 | `baseline/`（Codex CLI，见其 README） |
 | 四设置实验结果 | `experiments/RESULTS_FULL.md`、`experiments/results.csv` |
 | 实验报告 | `report/实验报告.md` |

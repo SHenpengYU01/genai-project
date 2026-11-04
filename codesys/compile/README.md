@@ -1,4 +1,4 @@
-# CODESYS ST 编译服务（交付给 Agent 框架的工具层）
+# CODESYS ST 编译检查（`codesys/compile`）
 
 无状态、批处理的 ST 代码编译/诊断服务。Agent 框架只需提供 **ST 代码文本**，
 服务负责：准备 CODESYS 工程 → 注入 POU → 编译 → 结构化提取报错 → 返回 JSON。
@@ -7,18 +7,20 @@
 - 目标版本：CODESYS V3.5 SP22 Patch 4（x64），本机 `D:\_ALLAPPS\CODESYS`
 - 运行宿主：CODESYS 内置 IronPython 2.7（服务内部）；客户端为任意 CPython 3
 - 目录可整体拷贝到其他装有同版本 CODESYS 的机器（路径均相对脚本定位）
+- 同层兄弟目录 `../simulate/` 是行为测试（仿真执行）；模板工程 `../template.project`
+  由两者共用。两者的分工见 `../README.md`。
 
 ## 1. 文件清单
 
 | 文件 | 作用 |
 |------|------|
-| `compile_worker.py` | IronPython 批编译 worker（在 CODESYS 进程内运行） |
-| `run_compile.bat` | 启动器：`CODESYS.exe --noUI --runscript ...` |
-| `codesys_build.py` | **CPython 3 客户端（推荐调用入口）**，纯标准库 |
-| `template.project` | 干净模板工程（Control Win V3 x64 + Application + MainTask + 空 PLC_PRG），自检 0 错误 |
-| `make_template.py` / `run_maketemplate.bat` | 模板工程再生成脚本（模板损坏时使用） |
-| `examples/` | 请求样例、批处理样例、Agent 修复循环示例 |
-| `work/` | 临时工程与请求文件，可随时清空 |
+| `worker.py` | IronPython 批编译 worker（在 CODESYS 进程内运行） |
+| `run_compile.bat` | 启动器：`CODESYS.exe --noUI --runscript worker.py ...` |
+| `client.py` | **CPython 3 客户端（推荐调用入口）**，纯标准库 |
+| `../template.project` | 干净模板工程（Control Win V3 x64 + Application + MainTask + 空 PLC_PRG），自检 0 错误 |
+| `../make_template.py` / `../run_make_template.bat` | 模板工程再生成脚本（模板损坏时使用） |
+| `examples/` | 请求样例、批处理样例、Agent 修复循环示例、DUT 回归测试 |
+| `work/` | 临时工程与请求文件，可随时清空（已 gitignore） |
 
 ## 2. 接口契约
 
@@ -101,7 +103,7 @@
 ### (a) CPython 库（推荐）
 
 ```python
-from codesys_build import compile_st, compile_jobs
+from client import compile_st, compile_jobs        # codesys/compile/client.py
 
 # 单个 POU
 r = compile_st(name="MotorCtrl", kind="function_block",
@@ -119,7 +121,7 @@ report = compile_jobs([job1, job2, job3])
 ### (b) 命令行（退出码即门禁）
 
 ```bat
-python codesys_build.py examples\batch_all.json work\out.json
+python codesys/compile/client.py codesys/compile/examples/batch_all.json out.json
 REM 0=全部通过  1=存在编译失败  2=工具/环境错误
 ```
 
@@ -166,7 +168,7 @@ REM 0=全部通过  1=存在编译失败  2=工具/环境错误
 ## 4.2 Standard 库（TON/R_TRIG 等）
 
 脚本化创建的空工程默认**不引用 Standard 库**，会导致模型生成的
-`TON/TOF/TP/R_TRIG/F_TRIG/CTU` 等标准功能块报"未知类型"。`compile_worker.py`
+`TON/TOF/TP/R_TRIG/F_TRIG/CTU` 等标准功能块报"未知类型"。`worker.py`
 已在每次编译前通过 `add_placeholder` 自动引用
 `Standard, 3.5.22.0 (3S - Smart Software Solutions GmbH)`，因此定时器/触发器
 功能块可正常编译。`bit` 是 CODESYS 保留类型名（`BIT`），不能用作变量名。

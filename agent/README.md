@@ -23,9 +23,9 @@
                                      └──────────► 成功 ◄──────────┘
 ```
 
-- **编译**：`tool/codesys_build.compile_jobs`，单作业；`auto_wire:false` + 自动生成的 `PLC_PRG` 调用者，
+- **编译**：`codesys/compile/client.py` 的 `compile_jobs`，单作业；`auto_wire:false` + 自动生成的 `PLC_PRG` 调用者，
   对 `VAR_IN_OUT`/结构体/数组参数同样做真实编译检查。
-- **测试**：`tester/run.py`，在 CODESYS 仿真（Control Win V3）里逐拍执行测试用例；
+- **测试**：`codesys/simulate/runner.py`，在 CODESYS 仿真（Control Win V3）里逐拍执行测试用例；
   失败时回传「用例/步骤/期望值/实际值（首失败步快照）」。
 - **上下文管理**：错误按 `(code, text)` 去重并计数；历史只保留最近 2 轮对话（system+题目常驻），
   避免重复输入膨胀。

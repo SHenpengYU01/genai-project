@@ -4,14 +4,14 @@ This is NOT the real generator agent - the LLM call is replaced by two canned
 candidates. It shows exactly how a generator agent should consume the compile
 feedback (error code + location + text) and decide when to stop.
 
-Run:  python examples/agent_loop_example.py
+Run:  python codesys/compile/examples/agent_loop_example.py
 Exit: 0 when the final candidate compiles, 1 otherwise.
 """
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from codesys_build import compile_st  # noqa: E402
+from client import compile_st  # noqa: E402
 
 TASK = {
     "name": "MotorCtrl",

@@ -1,4 +1,5 @@
 # Stateless single-task simulation worker for CODESYS (IronPython 2.7).
+# Invoked by run_simulation.bat from codesys/simulate/runner.py.
 #
 # Builds the project (DUTs + POU under test + generated self-test driver),
 # sets the MainTask cycle time to the test's scan_ms, enables Control Win V3
@@ -25,8 +26,7 @@ REQ = sys.argv[1] if len(sys.argv) > 1 else None
 RESP = sys.argv[2] if len(sys.argv) > 2 else None
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-TOOL_DIR = os.path.normpath(os.path.join(HERE, "..", "tool"))
-TEMPLATE = os.path.join(TOOL_DIR, "template.project")
+TEMPLATE = os.path.normpath(os.path.join(HERE, "..", "template.project"))
 WORKDIR = os.path.join(HERE, "work")
 
 DUT_KINDS = {

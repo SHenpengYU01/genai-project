@@ -5,7 +5,8 @@ Two usage modes
 
 1. Library (recommended for agent harnesses):
 
-    from codesys_build import compile_st, compile_jobs
+    # with codesys/compile on sys.path:
+    from client import compile_st, compile_jobs
 
     r = compile_st(
         name="MotorCtrl",
@@ -24,7 +25,7 @@ Two usage modes
 
 2. Command line:
 
-    python codesys_build.py request.json [response.json]
+    python codesys/compile/client.py request.json [response.json]
     echo %ERRORLEVEL%    # 0 all passed, 1 build failures, 2 tool/infra error
 
 The service launches CODESYS.exe --noUI once per batch; put as many jobs as
@@ -51,6 +52,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RUN_BAT = os.path.join(HERE, "run_compile.bat")
+WORKDIR = os.path.join(HERE, "work")
 
 # Exit codes produced by this client / batch runner.
 EXIT_ALL_PASSED = 0
@@ -65,9 +67,8 @@ class CompileToolError(RuntimeError):
 def _run_batch(request: dict, timeout: float = 300.0) -> dict:
     if not os.path.isfile(RUN_BAT):
         raise CompileToolError("runner not found: %s" % RUN_BAT)
-    workdir = os.path.join(HERE, "work")
-    os.makedirs(workdir, exist_ok=True)
-    fd, req_path = tempfile.mkstemp(prefix="req_", suffix=".json", dir=workdir)
+    os.makedirs(WORKDIR, exist_ok=True)
+    fd, req_path = tempfile.mkstemp(prefix="req_", suffix=".json", dir=WORKDIR)
     resp_path = req_path.replace("req_", "resp_")
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:

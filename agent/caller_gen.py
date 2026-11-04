@@ -12,8 +12,8 @@ import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_HERE)
-sys.path.insert(0, os.path.join(_ROOT, "tester"))
-import driver_gen as dg  # noqa: E402
+sys.path.insert(0, os.path.join(_ROOT, "codesys", "simulate"))
+import driver as dg  # noqa: E402  (codesys/simulate/driver.py)
 
 
 def _default_literal(t):
