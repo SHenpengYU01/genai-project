@@ -1,0 +1,354 @@
+% 演示文稿：面向 CODESYS 平台的 ST 代码自动生成系统
+% 编译：xelatex 两次（需要 texlive，使用 XeLaTeX）
+\PassOptionsToPackage{quiet}{fontspec}
+\PassOptionsToPackage{dvipsnames}{xcolor}
+\documentclass[10pt,aspectratio=169]{beamer}
+\usepackage{zju_beamer}
+\zjusectioncolor{blue}
+\usepackage{colortbl}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
+
+\graphicspath{{./figures/}}
+
+% 首页信息设置
+\title[CODESYS ST 代码自动生成]{面向 CODESYS 平台的 ST 代码自动生成系统}
+\subtitle{——自研 Agent Harness 与现有框架的四设置对比}
+\author[报告人]{报告人}
+\institute[ZJU]{计算机学院 \\ 浙江大学}
+\date{\today}
+
+% 顶部栏隐藏导航，节省空间（可选）
+\setbeamertemplate{section in head/foot shaded}[default]
+
+\begin{document}
+
+% ---------------------------------------------------------------- 1 标题页
+\begin{frame}
+	\titlepage
+\end{frame}
+
+% ---------------------------------------------------------------- 2 任务与难点
+\begin{frame}{问题：让大模型写出"真的能跑"的 PLC 代码}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\begin{block}{任务}
+				输入自然语言需求 + 接口表 + LTL 规约 \\
+				输出可直接在 CODESYS 编译并运行的
+				\textbf{IEC 61131-3 结构化文本（ST）}
+			\end{block}
+			\begin{alertblock}{三个难点}
+				\begin{itemize}
+					\item 语法/工程结构：DUT、Standard 库、调用图
+					\item 行为语义：状态机、定时器、边沿、优先级
+					\item 评测可信：需要\textbf{真实执行}而非文本相似
+				\end{itemize}
+			\end{alertblock}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{block}{为什么不能只看"像不像"}
+				\begin{itemize}
+					\item 编译通过 $\neq$ 行为正确：
+					      差一拍、优先级错都会"看起来对"
+					\item 自研解释器又会引入
+					      "不支持某语法"的假失败
+				\end{itemize}
+			\end{block}
+			\begin{exampleblock}{判定标准}
+				必须来自\textbf{真实 CODESYS 编译 + 仿真运行}，
+				而不是文本相似度或自研解释器
+			\end{exampleblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 3 数据集
+\begin{frame}{数据集：可编译、可执行、可追溯}
+	\begin{columns}[T]
+		\begin{column}{0.46\textwidth}
+			\begin{block}{规模}
+				\begin{itemize}
+					\item \textbf{30 题}：公共 20 + 自建 10
+					\item 难度：easy 9 / medium 12 / hard 9
+					\item \textbf{75 条 LTL 规约}（2.5 条/题）
+					\item \textbf{54 组用例 / 199 个扫描步}
+				\end{itemize}
+			\end{block}
+			\begin{block}{每题包含}
+				中英需求 $\cdot$ 结构化接口（含 DUT）$\cdot$
+				LTL 规约 $\cdot$ 行为用例 $\cdot$
+				\textbf{可编译的参考实现}
+			\end{block}
+		\end{column}
+		\begin{column}{0.5\textwidth}
+			\begin{exampleblock}{质量门槛：先证明"题可做、用例对"}
+				\begin{itemize}
+					\item 参考实现 \textbf{30/30} 编译通过
+					\item 参考实现 \textbf{30/30} 通过自己的用例
+					\item 首轮自检修正 \textbf{16 处}
+					      用例/参考实现缺陷
+				\end{itemize}
+			\end{exampleblock}
+			\begin{block}{用例覆盖}
+				正常流程 $\cdot$ 边界条件 $\cdot$
+				优先级冲突 $\cdot$ 错误处理；
+				\textbf{每步写明测试目的}，并关联到 LTL 规约
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 4 系统架构
+\begin{frame}{系统架构：编译与仿真两道闸门 + 结构化反馈}
+	\centering
+	\resizebox{0.97\textwidth}{!}{%
+\begin{tikzpicture}[
+			x=1mm,y=1mm,
+			box/.style={draw=blue!45,fill=blue!6,rounded corners,
+					align=center,font=\scriptsize,inner sep=2pt,
+					minimum height=9mm,text width=21mm},
+			gate/.style={draw=orange!75,fill=orange!12,rounded corners,
+					align=center,font=\scriptsize,inner sep=2pt,
+					minimum height=9mm,text width=21mm},
+			ok/.style={draw=green!45!black,fill=green!10,rounded corners,
+					align=center,font=\scriptsize,inner sep=2pt,
+					minimum height=9mm,text width=21mm},
+			ar/.style={-{Latex[length=1.5mm]},thick,blue!55!black},
+			back/.style={-{Latex[length=1.5mm]},thick,orange!80!black,dashed}]
+
+		\node[box]  (task) at (11,0)  {题目\\需求+接口+LTL};
+		\node[box]  (llm)  at (37,0)  {LLM\\生成整块代码};
+		\node[box]  (chk)  at (63,0)  {解析+接口校验\\零成本};
+		\node[gate] (cmp)  at (89,0)  {编译\\（CODESYS）};
+		\node[gate] (sim)  at (115,0) {行为测试\\（CODESYS 仿真）};
+		\node[ok]   (done) at (139,0) {成功};
+
+		\draw[ar] (task) -- (llm);
+		\draw[ar] (llm) -- (chk);
+		\draw[ar] (chk) -- (cmp);
+		\draw[ar] (cmp) -- (sim);
+		\draw[ar] (sim) -- (done);
+
+		\node[fill=orange!8,draw=orange!50,rounded corners,font=\scriptsize,
+		      inner sep=2.5pt,text width=118mm,align=center] (fb) at (70,-17)
+		     {结构化反馈：接口/命名错误 $\cdot$ 编译错误码+行列+消息
+		      $\cdot$ 失败用例/步+期望值+实测值};
+		\draw[back] (chk.south) -- (chk.south |- fb.north);
+		\draw[back] (cmp.south) -- (cmp.south |- fb.north);
+		\draw[back] (sim.south) -- (sim.south |- fb.north);
+		\draw[back] (fb.west) -- (fb.west -| llm.south) -- (llm.south);
+	\end{tikzpicture}
+	}
+
+	\vspace{0.4em}
+	\begin{columns}[T]
+		\begin{column}{0.49\textwidth}
+			\begin{block}{上下文与成本控制}
+				\begin{itemize}
+					\item 只保留最近 2 轮对话
+					\item 编译错误按 (code, text) 去重计数
+					\item 测试只回传首个失败步
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.47\textwidth}
+			\begin{block}{终止条件}
+				\begin{itemize}
+					\item 通过 / 5 轮 / 代码无变化
+					\item 失败签名连续 2 次相同
+					\item \texttt{tool\_error} 单列，不计入模型
+				\end{itemize}
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 5 CODESYS 接入
+\begin{frame}{CODESYS 接入：用官方运行时，而不是自研解释器}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\begin{block}{\texttt{codesys/compile}：编不编得过}
+				\begin{itemize}
+					\item 模板工程 + DUT + Standard 库注入
+					\item \texttt{auto\_wire}：生成隐藏调用者，
+					      让每个 POU 真正进入编译图
+					\item 返回错误码 + 行列 + 中文消息
+					\item 单次约 \textbf{13 s}
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{block}{\texttt{codesys/simulate}：跑起来对不对}
+				\begin{itemize}
+					\item 用例编译成 PLC 内\textbf{自测驱动}
+					\item 逐拍设输入、断言输出、记录实测值
+					\item 语义与编译器一致，无"不支持语法"
+					\item 单次约 \textbf{24 s}
+				\end{itemize}
+			\end{block}
+		\end{column}
+	\end{columns}
+	\vspace{0.4em}
+	\begin{alertblock}{设计取舍}
+		编译闸门（实测约 13 s）比仿真闸门（约 24 s）便宜一半，
+		且格式/接口错误在\textbf{零成本预校验}就被拦下；
+		对弱模型，多数修复轮次消耗在编译反馈上
+		（Codex+Qwen 首轮 25/30 未编译通过）。
+	\end{alertblock}
+\end{frame}
+
+% ---------------------------------------------------------------- 6 实验设置
+\begin{frame}{实验设置：2×2 公平对比}
+	\begin{columns}[T]
+		\begin{column}{0.38\textwidth}
+			\centering
+			\renewcommand{\arraystretch}{1.3}
+			\resizebox{\columnwidth}{!}{%
+			\begin{tabular}{lcc}
+				\hline
+				& \textbf{DeepSeek} & \textbf{Qwen} \\
+				\hline
+				\textbf{Codex CLI} & 实验 1 & 实验 2 \\
+				\textbf{自研 harness} & 实验 3 & 实验 4 \\
+				\hline
+			\end{tabular}
+			}
+			\vspace{0.8em}
+			\begin{block}{规模}
+				30 题 × 4 设置 = \textbf{120 次运行} \\
+				每题最多 5 轮；\texttt{tool\_error}
+				已重试至 \textbf{0}
+			\end{block}
+		\end{column}
+		\begin{column}{0.57\textwidth}
+			\begin{block}{公平性约束}
+				\begin{itemize}
+					\item 同一 DMXAPI 网关、同一模型快照
+					\item 同一提示、同一反馈文本、同一轮次上限
+					\item 同一 CODESYS 模板与 worker、
+					      同一编译/测试管线
+					\item Codex 包装成相同的
+					      \texttt{chat(messages)} 接口，
+					      差异只在生成组织方式
+				\end{itemize}
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 7 结果
+\begin{frame}{结果：DeepSeek 下持平，Qwen 下自研显著更好}
+	\vspace{0.6em}
+	\begin{center}
+		\large
+		\setlength{\tabcolsep}{7pt}
+		\renewcommand{\arraystretch}{1.35}
+		\begin{tabular}{llcccc}
+			\hline
+			框架 & 模型 & 首次编译 & 测试通过 & 平均轮次 & 输入 tokens \\
+			\hline
+			自研 & DeepSeek & 96.7\% & \textbf{83.3\%} & 1.77 & 75k \\
+			自研 & Qwen     & 76.7\% & \textbf{66.7\%} & 2.53 & 131k \\
+			Codex & DeepSeek & 100.0\% & \textbf{83.3\%} & 1.70 & 565k \\
+			\rowcolor{red!12}
+			Codex & Qwen     & 16.7\% & \textbf{33.3\%} & 4.00 & 1633k \\
+			\hline
+		\end{tabular}
+	\end{center}
+	\vspace{0.4em}
+	\begin{columns}[T]
+		\begin{column}{0.32\textwidth}
+			\begin{block}{质量}
+				DeepSeek 两框架测试通过率\textbf{持平}（83.3\%），
+				自研最终编译 100\%
+			\end{block}
+		\end{column}
+		\begin{column}{0.32\textwidth}
+			\begin{block}{成本}
+				自研输入 token 仅为 Codex 的 \textbf{13\%}
+				（75k vs 565k），耗时约 \textbf{48\%}
+			\end{block}
+		\end{column}
+		\begin{column}{0.32\textwidth}
+			\begin{block}{鲁棒性}
+				Qwen 经 Codex 首轮编译仅 16.7\%，
+				18/30 题耗尽 5 轮
+			\end{block}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 8 分析
+\begin{frame}{分析：框架×模型存在强交互}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\begin{block}{为什么 Qwen 经 Codex 会崩}
+				\begin{itemize}
+					\item 首轮普遍非 IEC 语法：
+					      \texttt{C6} 140 次（把 \texttt{:=} 写成 \texttt{=}、用 \texttt{!}）
+					\item 遗漏 \texttt{VAR\_IN\_OUT} 参数、非法 DUT
+					\item 每轮修复成功率低 → 轮次耗尽
+				\end{itemize}
+			\end{block}
+			\begin{block}{自研为何更稳}
+				\begin{itemize}
+					\item 块格式 + 接口预校验把错误挡在编译前
+					\item 反馈短、聚焦单点，弱模型也能迭代
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.46\textwidth}
+			\begin{block}{剩余失败集中在行为语义}
+				\begin{itemize}
+					\item 状态机（五工位、柔性加工）
+					\item 定时/边沿（焊缝去抖、自动门、交通灯）
+					\item 典型症状：差一拍、优先级未覆盖
+				\end{itemize}
+			\end{block}
+			\begin{alertblock}{结论}
+				框架与模型需要\textbf{匹配调优}；
+				"更强的 agent 框架对任意模型都更好"不成立。
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 9 结论与局限
+\begin{frame}{总结与局限}
+	\begin{columns}[T]
+		\begin{column}{0.5\textwidth}
+			\begin{block}{已完成}
+				\begin{itemize}
+					\item 30 题数据集：LTL 规约 + 行为用例 + 参考实现
+					\item 自研 harness：编译/仿真双闸门闭环
+					\item CODESYS 编译与仿真服务，可整体迁移
+					\item 四设置公平评测，自动测试（加分项）
+				\end{itemize}
+			\end{block}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\begin{alertblock}{局限与后续}
+				\begin{itemize}
+					\item 每题仅采样 1 次，存在方差
+					\item LTL 未机器验证；用例覆盖有缺口
+					\item 下一步：接入 PLCVerif、
+					      补强用例覆盖、多平台验证
+				\end{itemize}
+			\end{alertblock}
+		\end{column}
+	\end{columns}
+	\vspace{0.6em}
+	\begin{center}
+		\begin{tcolorbox}[colback=blue!6,colframe=blue!45,arc=2pt,
+				left=4pt,right=4pt,top=2pt,bottom=2pt]
+			\centering\small
+			一句话结论：\textbf{把"能不能编译、跑得对不对"做成结构化反馈}，
+			弱模型也能被推上来；框架与模型需要匹配调优。
+		\end{tcolorbox}
+	\end{center}
+	\vspace{0.3em}
+	\centering
+	{\Large 谢谢，请指正}
+\end{frame}
+
+\end{document}

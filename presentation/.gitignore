@@ -1,0 +1,13 @@
+# 构建产物（保留 slides.tex / slides.pdf / 样式与图片）
+*.aux
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+*.vrb
+*.synctex.gz
+_preview/
+
+# 上游模板仓库（只借用其样式与图片，不纳入本仓库历史）
+ZJU-Beamer-Template/
