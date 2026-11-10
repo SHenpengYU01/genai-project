@@ -1,13 +1,28 @@
 # 四设置对比实验结果（自研 harness vs Codex CLI × DeepSeek/Qwen）
 
-- 日期：2026-11-02
+- 日期：2026-11-10（Codex+Qwen 于解析器修复后重跑；其余三组沿用 2026-11-02 结果）
 - 网关：DMXAPI (`https://www.dmxapi.cn/v1`)
 - 模型：DeepSeek `deepseek-v4.1-flash-1017`、Qwen `qwen3.7-flash`
 - 数据集：30 题（20 公共 + 10 自建；easy 9 / medium 12 / hard 9）
 - 设置：两框架同提示、同反馈文本、同 max_rounds=5、同编译/测试管线
-- 代码版本：b4c000f
+- 数据来源：`experiments/runs/merged`（= agent_2models 60 条 + codex_2models/deepseek 30 条 + codex_qwen_rerun 30 条）
 
-数据来源：experiments/runs/agent_2models, experiments/runs/codex_2models
+## 重跑说明（Codex + Qwen 一组）
+
+2026-11-10 发现并修复了**输出解析器对块格式过于严格**的问题：Codex CLI 沿用的模型输出常省略
+`<<<IMPL>>>` 标记（把语句体直接接在最后一个 `END_VAR` 之后），旧解析器会把它整体当作声明区，
+从而报 `C135 在声明部分不支持代码`；另有把 POU 写进 `<<<DUT ...>>>` 块的情况被判为非法 DUT。
+修复后（`agent/parser.py`：缺 IMPL 时按最后一个 `END_VAR` 切分；DUT 块按内容重判类型）：
+
+| Codex + Qwen | 修复前 | 修复后 |
+| --- | --- | --- |
+| 首次编译通过率 | 16.7% | **30.0%** |
+| 最终编译通过率 | 53.3% | **83.3%** |
+| 测试通过率 | 33.3% | **46.7%** |
+| 平均轮次 | 4.00 | 3.53 |
+
+回归验证：该修复对格式规范的输出无影响（`experiments/mocks/` 150 份输出解析结果逐字节一致），
+Codex + DeepSeek 的历史输出现有 0 处变化，自研 harness 两组结果未重跑。
 
 ## 总体指标
 
@@ -16,14 +31,14 @@
 | 自研 harness | deepseek-v4.1-flash-1017 | 30 | 96.7% | 100.0% | 83.3% | 83.3% | 1.77 | 163 | 75058 | 383312 |
 | 自研 harness | qwen3.7-flash | 30 | 76.7% | 93.3% | 66.7% | 66.7% | 2.53 | 295 | 131255 | 503606 |
 | Codex CLI | deepseek-v4.1-flash-1017 | 30 | 100.0% | 100.0% | 83.3% | 83.3% | 1.70 | 342 | 565110 | 521147 |
-| Codex CLI | qwen3.7-flash | 30 | 16.7% | 53.3% | 33.3% | 33.3% | 4.00 | 431 | 1632869 | 358524 |
+| Codex CLI | qwen3.7-flash | 30 | 30.0% | 83.3% | 46.7% | 46.7% | 3.53 | 315 | 1404958 | 394781 |
 
 ## 实验设置矩阵（首次编译通过率 / 测试通过率）
 
 | 框架 | deepseek-v4.1-flash-1017 | qwen3.7-flash |
 | --- | --- | --- |
 | 自研 harness | 96.7% / 83.3% | 76.7% / 66.7% |
-| Codex CLI | 100.0% / 83.3% | 16.7% / 33.3% |
+| Codex CLI | 100.0% / 83.3% | 30.0% / 46.7% |
 
 ## 分难度（测试通过率）
 
@@ -32,7 +47,7 @@
 | 自研 harness | deepseek-v4.1-flash-1017 | 77.8% | 91.7% | 77.8% |
 | 自研 harness | qwen3.7-flash | 55.6% | 83.3% | 55.6% |
 | Codex CLI | deepseek-v4.1-flash-1017 | 88.9% | 83.3% | 77.8% |
-| Codex CLI | qwen3.7-flash | 55.6% | 16.7% | 33.3% |
+| Codex CLI | qwen3.7-flash | 55.6% | 41.7% | 44.4% |
 
 ## 未成功任务
 
@@ -58,23 +73,19 @@
 | Codex CLI | deepseek-v4.1-flash-1017 | public_medium_003 | medium | max_rounds | 5 | 测试未通过 |
 | Codex CLI | deepseek-v4.1-flash-1017 | public_medium_005 | medium | no_progress | 3 | 测试未通过 |
 | Codex CLI | deepseek-v4.1-flash-1017 | self_easy_003 | easy | no_progress | 3 | 测试未通过 |
-| Codex CLI | qwen3.7-flash | public_easy_004 | easy | no_progress | 5 | 编译未通过 |
+| Codex CLI | qwen3.7-flash | public_easy_004 | easy | max_rounds | 5 | 编译未通过 |
 | Codex CLI | qwen3.7-flash | public_easy_005 | easy | no_progress | 4 | 测试未通过 |
-| Codex CLI | qwen3.7-flash | public_hard_001 | hard | max_rounds | 5 | 编译未通过 |
 | Codex CLI | qwen3.7-flash | public_hard_002 | hard | max_rounds | 5 | 测试未通过 |
 | Codex CLI | qwen3.7-flash | public_hard_003 | hard | max_rounds | 5 | 编译未通过 |
-| Codex CLI | qwen3.7-flash | public_hard_004 | hard | max_rounds | 5 | 编译未通过 |
-| Codex CLI | qwen3.7-flash | public_hard_006 | hard | max_rounds | 5 | 编译未通过 |
+| Codex CLI | qwen3.7-flash | public_hard_005 | hard | max_rounds | 5 | 测试未通过 |
+| Codex CLI | qwen3.7-flash | public_hard_006 | hard | max_rounds | 5 | 测试未通过 |
 | Codex CLI | qwen3.7-flash | public_medium_001 | medium | max_rounds | 5 | 测试未通过 |
-| Codex CLI | qwen3.7-flash | public_medium_002 | medium | max_rounds | 5 | 编译未通过 |
+| Codex CLI | qwen3.7-flash | public_medium_002 | medium | max_rounds | 5 | 测试未通过 |
 | Codex CLI | qwen3.7-flash | public_medium_003 | medium | max_rounds | 5 | 编译未通过 |
 | Codex CLI | qwen3.7-flash | public_medium_004 | medium | max_rounds | 5 | 测试未通过 |
-| Codex CLI | qwen3.7-flash | public_medium_005 | medium | max_rounds | 5 | 编译未通过 |
 | Codex CLI | qwen3.7-flash | public_medium_006 | medium | max_rounds | 5 | 编译未通过 |
-| Codex CLI | qwen3.7-flash | public_medium_007 | medium | max_rounds | 5 | 编译未通过 |
 | Codex CLI | qwen3.7-flash | public_medium_008 | medium | max_rounds | 5 | 编译未通过 |
-| Codex CLI | qwen3.7-flash | self_easy_001 | easy | max_rounds | 5 | 编译未通过 |
-| Codex CLI | qwen3.7-flash | self_easy_003 | easy | max_rounds | 5 | 编译未通过 |
-| Codex CLI | qwen3.7-flash | self_hard_003 | hard | max_rounds | 5 | 编译未通过 |
-| Codex CLI | qwen3.7-flash | self_medium_002 | medium | no_progress | 5 | 测试未通过 |
-| Codex CLI | qwen3.7-flash | self_medium_004 | medium | no_progress | 3 | 测试未通过 |
+| Codex CLI | qwen3.7-flash | self_easy_001 | easy | max_rounds | 5 | 测试未通过 |
+| Codex CLI | qwen3.7-flash | self_easy_003 | easy | no_progress | 4 | 测试未通过 |
+| Codex CLI | qwen3.7-flash | self_hard_003 | hard | max_rounds | 5 | 测试未通过 |
+| Codex CLI | qwen3.7-flash | self_medium_002 | medium | max_rounds | 5 | 测试未通过 |

@@ -70,7 +70,7 @@ python experiments/summarize.py experiments/runs/agent_2models
 | CODESYS 编译集成 | `codesys/compile/`（见 `codesys/compile/README.md`） |
 | 自动行为测试（加分项） | `codesys/simulate/`（CODESYS 仿真 + 自测驱动，见 `codesys/README.md`） |
 | 现有框架基线 | `baseline/`（Codex CLI，见其 README） |
-| 四设置实验结果 | `experiments/RESULTS_FULL.md`、`experiments/results.csv` |
+| 四设置实验结果 | `experiments/RESULTS_FULL.md`、`experiments/results.csv`（含 Codex+Qwen 解析器修复后的重跑说明） |
 | 实验报告 | `report/实验报告.md` |
 | 汇报 slides（5 分钟） | `presentation/concise/main.pdf`、`presentation/concise/讲稿.md` |
 

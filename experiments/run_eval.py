@@ -112,6 +112,16 @@ def main():
             alias, _, name = part.partition("=")
             model_names[alias.strip()] = name.strip()
 
+    if not args.mock:
+        # Record the model id actually used, even when --model-names was not
+        # passed, so a run can be audited after the fact.
+        for model in models:
+            if model not in model_names:
+                try:
+                    model_names[model] = resolve_model(model)["model"]
+                except Exception:
+                    pass
+
     os.makedirs(os.path.join(args.outdir, "tasks"), exist_ok=True)
     summary = {"runs": {}, "started": time.strftime("%Y-%m-%d %H:%M:%S"),
                "config": {
@@ -167,7 +177,7 @@ def main():
                   flush=True)
         name = model_names.get(model)
         if not name and records:
-            name = records[0].get("model_name")
+            name = records[0].get("model_name") or records[0].get("model")
         summary["runs"][label] = {
             "model_name": name,
             "overall": aggregate(records),

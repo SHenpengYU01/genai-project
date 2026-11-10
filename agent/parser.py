@@ -92,8 +92,49 @@ def _fallback_parse(text):
     return {"duts": duts, "pous": pous, "errors": []}
 
 
+_POU_HEADER_KINDS = (("FUNCTION_BLOCK", "function_block"),
+                     ("PROGRAM", "program"),
+                     ("FUNCTION", "function"))
+
+
+def _split_body(decl_lines):
+    """Split a POU block that forgot ``<<<IMPL>>>``.
+
+    Some frameworks write the statement body straight after the last END_VAR of
+    the declaration. Returns (decl_text, impl_lines); impl_lines is empty when
+    the block really is declaration-only.
+    """
+    last_end_var = None
+    for j, ln in enumerate(decl_lines):
+        if re.match(r"^\s*END_VAR\b", ln, re.I):
+            last_end_var = j
+    if last_end_var is None:
+        return "\n".join(decl_lines).strip(), []
+    tail = decl_lines[last_end_var + 1:]
+    # only treat the tail as a body if it has statement-looking content
+    if not any(ln.strip() and not ln.strip().startswith(("(*", "//"))
+               for ln in tail):
+        return "\n".join(decl_lines).strip(), []
+    return ("\n".join(decl_lines[:last_end_var + 1]).strip(), tail)
+
+
+def _detect_kind(decl_text, kind_tag):
+    """Content-based kind: a DUT tag around FUNCTION_BLOCK/PROGRAM text is a POU."""
+    head = (decl_text or "").lstrip().upper()
+    for word, kind in _POU_HEADER_KINDS:
+        if head.startswith(word):
+            return kind
+    return None
+
+
 def parse(text):
-    """Return {"duts": [...], "pous": [...], "errors": [str, ...]}."""
+    """Return {"duts": [...], "pous": [...], "errors": [...]}.
+
+    Tolerant about two formatting deviations seen from agent-framework CLIs
+    (they cost real submissions otherwise):
+      * a POU block without ``<<<IMPL>>>`` -> split at the last END_VAR;
+      * a POU written into a ``<<<DUT ...>>>`` block -> reclassify by header.
+    """
     duts, pous, errors = [], [], []
     lines = text.splitlines()
     i = 0
@@ -122,18 +163,36 @@ def parse(text):
             errors.append("块 '%s' 缺少 <<<END>>>" % name)
         decl = "\n".join(decl_lines).strip()
         impl = "\n".join(impl_lines).strip()
+
+        detected = _detect_kind(decl, kind_tag)
+        if detected is not None:
+            if kind_tag == "DUT":
+                kind_tag, kind = "POU", detected
+            elif kind not in ("function_block", "program", "function"):
+                kind = detected
+
         if kind_tag == "DUT":
             if not decl:
                 errors.append("DUT '%s' 声明为空" % name)
                 continue
             duts.append({"name": name, "kind": kind, "declaration": decl})
-        else:
-            if not decl:
-                errors.append("POU '%s' 声明为空" % name)
-                continue
-            pous.append({"name": name, "kind": kind,
-                         "declaration": decl + "\n",
-                         "implementation": (impl + "\n") if impl else ""})
+            continue
+
+        if not impl:
+            if detected is not None:
+                # The block is POU text; drop the FUNCTION_BLOCK header line
+                # only if the body was inlined after END_VAR.
+                split_decl, split_impl = _split_body(decl_lines)
+                if split_impl and detected is not None:
+                    decl, impl = split_decl, "\n".join(split_impl).strip()
+        if not decl:
+            errors.append("POU '%s' 声明为空" % name)
+            continue
+        if kind not in ("function_block", "program", "function"):
+            kind = detected or "function_block"
+        pous.append({"name": name, "kind": kind,
+                     "declaration": decl + "\n",
+                     "implementation": (impl + "\n") if impl else ""})
     if not pous and not duts and not errors:
         fb = _fallback_parse(text)
         if fb["pous"] or fb["duts"]:

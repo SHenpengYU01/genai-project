@@ -219,7 +219,7 @@ def _model_results():
     if not os.path.isfile(RESULTS_CSV):
         return {}
     import csv
-    fw_name = {"self": "自研", "codex": "Codex"}
+    fw_name = {"self": "自研", "agent": "自研", "codex": "Codex"}
     out = {}
     with open(RESULTS_CSV, encoding="utf-8") as f:
         for row in csv.DictReader(f):
@@ -230,8 +230,10 @@ def _model_results():
                                short)
             ok = row.get("tests_pass") == "1"
             out.setdefault(row["task"], []).append((label, ok))
+    order = {"自研+DeepSeek": 0, "自研+Qwen": 1,
+             "Codex+DeepSeek": 2, "Codex+Qwen": 3}
     for v in out.values():
-        v.sort(key=lambda x: (0 if x[0].startswith("自研") else 1, x[0]))
+        v.sort(key=lambda x: (order.get(x[0], 9), x[0]))
     return out
 
 
