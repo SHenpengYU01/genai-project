@@ -1,4 +1,4 @@
-# 构建产物（保留 slides.tex / slides.pdf / 样式与图片）
+# 构建产物（保留 main.tex / main.pdf / 样式与图片）
 *.aux
 *.log
 *.nav
@@ -7,6 +7,9 @@
 *.toc
 *.vrb
 *.synctex.gz
+*.xdv
+*.fls
+*.fdb_latexmk
 _preview/
 
 # 上游模板仓库（只借用其样式与图片，不纳入本仓库历史）

@@ -155,10 +155,25 @@
 }
 \def\zju@blue{blue}
 % 默认 headline 颜色
+\def\zju@headlinecolor{section in head/foot}
+% 兜底默认值：即使 .tex 中未调用 \zjusectioncolor，页眉也不会因未定义而报错
+
+% --- 页眉右上角 Logo 区域宽度（可手动调节） ---
+% 该长度决定右上角蓝色色块（校徽 + “浙江大学”）的总宽度。
+% 值越小，Logo 两侧的蓝色空白越小；值越大，蓝色空白越多。
+% 左侧章节导航色块宽度自动取 \paperwidth 减去本长度。
+\newlength{\zju@logowidth}
+\setlength{\zju@logowidth}{0.20\paperwidth} % ← 想更紧凑就继续调小（如 0.20），想更宽松就调大（如 0.26）
+\newlength{\zju@navwidth}
+
+% 页眉右上角区域宽度调整命令，可在 .tex 中调用，例如 \zjusetlogowidth{0.21\paperwidth}
+\newcommand{\zjusetlogowidth}[1]{\setlength{\zju@logowidth}{#1}}
 
 % --- 页眉 headline ---
 \defbeamertemplate*{headline}{zju theme}{%
   \leavevmode%
+  \zju@navwidth=\paperwidth%
+  \advance\zju@navwidth by -\zju@logowidth%
   \@tempdimb=6.4375ex%
   %\multiply\@tempdimb by\beamer@sectionmax%
   \pgfdeclareimage[height=.85\@tempdimb]{logo}{figures/logo.pdf}%
@@ -166,17 +181,14 @@
   \logo{\pgfuseimage{logo}}%
   \ifdim\@tempdimb>0pt%
     \advance\@tempdimb by 1.125ex%
-    \begin{beamercolorbox}[wd=.8\paperwidth,ht=\@tempdimb]{section in head/foot}%
-      \vbox to\@tempdimb{\vfil\insertsectionnavigationhorizontal{.5\textwidth}{\hskip0pt plus1filll}{}\vfil}%
+    \begin{beamercolorbox}[wd=\zju@navwidth,ht=\@tempdimb]{section in head/foot}%
+      \vbox to\@tempdimb{\vfil\insertsectionnavigationhorizontal{\zju@navwidth}{}{}\vfil}%
     \end{beamercolorbox}%
     %% \begin{beamercolorbox}[wd=.4\paperwidth,ht=\@tempdimb,center]{subsection in head/foot}%
     %%   \vbox to\@tempdimb{\vfil\textbf{\footnotesize\insertshortinstitute~~}\vfil}%
     %% \end{beamercolorbox}%
-    \begin{beamercolorbox}[wd=.135\paperwidth,ht=\@tempdimb,center]{\zju@headlinecolor} % 可切换颜色
-      \vbox to\@tempdimb{\vfil\pgfuseimage{title_logo}\vfil}%
-    \end{beamercolorbox}%
-    \begin{beamercolorbox}[wd=.065\paperwidth,ht=\@tempdimb,center]{\zju@headlinecolor} % 可切换颜色
-      \vbox to\@tempdimb{\vfil\insertlogo\vfil\vfil}%
+    \begin{beamercolorbox}[wd=\zju@logowidth,ht=\@tempdimb,center]{\zju@headlinecolor} % 可切换颜色
+      \vbox to\@tempdimb{\vfil\hbox{\pgfuseimage{logo}\hskip7pt\pgfuseimage{title_logo}}\vfil}%
     \end{beamercolorbox}%
   \fi%
 }
