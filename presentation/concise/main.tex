@@ -30,10 +30,10 @@
 \end{frame}
 
 % ============================================================
-\section{问题与总览}
+\section{问题总览}
 
 \begin{frame}
-  \frametitle{目标、交付与评价取向}
+  \frametitle{问题总览}
 
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
@@ -200,14 +200,14 @@
     自研 + Qwen      & 76.7\%  & 93.3\%  & \textbf{66.7\%} & 2.53 & 295 s \\
     Codex + DeepSeek & 100.0\% & 100.0\% & \textbf{83.3\%} & 1.70 & 342 s \\
     \rowcolor{red!12}
-    Codex + Qwen     & 16.7\%  & 53.3\%  & \textbf{33.3\%} & 4.00 & 431 s \\
+    Codex + Qwen     & 30.0\%  & 83.3\%  & \textbf{46.7\%} & 3.53 & 315 s \\
     \hline
   \end{tabular}
 
   \vspace{2.5mm}
   \statbox{83.3\% / 83.3\%}{DeepSeek 下两框架测试通过率\textbf{完全持平}}
   \hfill
-  \statbox{66.7\% vs 33.3\%}{Qwen 下自研\textbf{高出 33 个百分点}}
+  \statbox{66.7\% vs 46.7\%}{Qwen 下自研\textbf{高出 20 个百分点}}
   \hfill
   \statbox{96.7\% vs 100\%}{首轮编译：自研靠反馈追平最终结果}
 \end{frame}
@@ -226,7 +226,7 @@
     自研 + DeepSeek  & 75,058    & 383,312 & 163 s & 输入 \textbf{13\%}、耗时 \textbf{48\%} \\
     自研 + Qwen      & 131,255   & 503,606 & 295 s & 输入 \textbf{8\%}、耗时 \textbf{68\%} \\
     Codex + DeepSeek & 565,110   & 521,147 & 342 s & --- \\
-    Codex + Qwen     & 1,632,869 & 358,524 & 431 s & --- \\
+    Codex + Qwen     & 1,404,958 & 394,781 & 315 s & --- \\
     \hline
   \end{tabular}
 
@@ -279,7 +279,7 @@
               编译闸门已不是瓶颈，扣分全在行为层
         \item 自研 + Qwen 也只剩 2 题编不过，靠反馈把 28 题送进测试
         \item Codex + Qwen 有 \textbf{14 题最终仍编译失败}：
-              首轮编译仅 16.7\%，5 轮预算基本耗在语法上
+              首轮编译 30\%，5 轮预算常耗在语法上
         \item 只看编译通过的题，行为通过率为 83.3\% / 83.3\% / 71.4\% / 62.5\%：
               Qwen 下两框架的差距从 \textbf{33 个百分点收窄到 9 个百分点}，
               其余差距来自没编译过的题
@@ -301,23 +301,23 @@
         模型 & 自研败 & Codex 败 & 重合 & 自研独有 \\
         \hline
         DeepSeek & 5  & 5  & \textbf{4} & 1 \\
-        Qwen     & 10 & 20 & \textbf{10} & \textbf{0} \\
+        Qwen     & 10 & 16 & \textbf{9}  & 1 \\
         \hline
       \end{tabular}
 
       \vspace{2mm}
       \raggedright\footnotesize
       失败题集高度重合：DeepSeek 下两框架只在 1 题上各自不同；
-      Qwen 下自研的 10 题失败\textbf{全部}包含在 Codex 的 20 题失败里，
-      Codex 多出的 10 题中 6 题是编译失败。
+      Qwen 下自研的 10 题失败有 9 题也在 Codex 的 16 题失败里，
+      Codex 多出的 7 题中 5 题是编译失败。
     \end{column}
     \begin{column}{0.53\textwidth}
       \begin{itemize}
-        \item \textbf{错误码}（Codex+Qwen 累计）：\texttt{C6} 140 次
-              （把 \texttt{:=} 写成 \texttt{=}、用 \texttt{!}）、
-              \texttt{C189} 95、\texttt{C9} 80、\texttt{C32} 43、\texttt{C135} 41
-        \item \textbf{轮次}：18/30 题耗尽 5 轮；首轮编译失败 25/30
-        \item \textbf{难度}：Codex+Qwen 在 medium 仅 2/12 通过——
+        \item \textbf{错误码}（Codex+Qwen 累计）：\texttt{C189} 74、
+              \texttt{C9} 68、\texttt{C32} 32（类型转换）、\texttt{C46} 22、
+              \texttt{C7} 20、\texttt{C6} 13
+        \item \textbf{轮次}：14/30 题耗尽 5 轮；首轮编译失败 21/30
+        \item \textbf{难度}：Codex+Qwen 在 medium 仅 5/12 通过——
               中型题语法规模更大，错误更早累积
         \item 自研的“块格式 + 接口预校验 + 单轮整体重写”
               更贴合 Qwen 的输出习惯；Codex 的通用 agent 提示反而诱发非 IEC 写法
@@ -357,16 +357,16 @@
 \end{frame}
 
 % ============================================================
-\section{结论}
+\section{总结}
 
 \begin{frame}
-  \frametitle{结论与后续}
+  \frametitle{总结}
 
   \begin{enumerate}
     \item 建成 30 题数据集，逐题 LTL 规约、测试用例（含逐步测试目的）与参考实现；
           参考实现 30/30 通过编译与仿真，形成可复现基线
     \item 自研 harness 在 DeepSeek 下达到与 Codex 相同的测试通过率（83.3\%），
-          输入 token 约为其 1/7、耗时约 1/2；在 Qwen 下显著更优（66.7\% vs 33.3\%）
+          输入 token 约为其 1/7、耗时约 1/2；在 Qwen 下仍更优（66.7\% vs 46.7\%）
     \item 差距主要落在编译层与上下文成本，而非“模型想得不够”；
           剩余失败集中在行为语义
   \end{enumerate}
