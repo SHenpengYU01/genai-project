@@ -16,14 +16,6 @@
 \institute[浙江大学]{浙江大学}
 \date{\today}
 
-% 统一的“要点”条：每页结论只留一句
-\newcommand{\takeaway}[1]{%
-  \vspace{0.1em}%
-  \begin{tcolorbox}[colback=blue!6,colframe=blue!45,arc=1.5pt,
-      left=4pt,right=4pt,top=1pt,bottom=1pt]
-    \small\textbf{要点}\quad #1
-  \end{tcolorbox}}
-
 % 大数字强调块
 \newcommand{\statbox}[2]{%
   \begin{minipage}[t]{0.31\linewidth}\centering
@@ -70,8 +62,6 @@
     \end{column}
   \end{columns}
 
-  \takeaway{判定必须来自\textbf{真实 CODESYS 编译 + 仿真运行}；
-  自研解释器会引入“不支持某语法”的假失败，文本相似度则分不清“差一拍”。}
 \end{frame}
 
 % ============================================================
@@ -109,12 +99,12 @@
         \item \textbf{规约}：互斥、响应、保持、范围不变量、错误码
         \item \textbf{用例}：正常流程、边界、优先级冲突、错误处理；
               \textbf{每步写明测试目的}并关联到 LTL 规约
+        \item \textbf{自检}：参考实现 \textbf{30/30} 编译且 \textbf{30/30}
+              通过自己的用例（首轮曾暴露 16 处用例缺陷）
       \end{itemize}
     \end{column}
   \end{columns}
 
-  \takeaway{先钉死“题可做、用例对”：参考实现 \textbf{30/30} 编译且
-  \textbf{30/30} 通过自己的用例（首轮自检曾暴露 16 处用例缺陷），才谈模型通过率。}
 \end{frame}
 
 % ============================================================
@@ -159,13 +149,11 @@
         \item \textbf{上下文}：仅保留最近 2 轮；错误按 (code, text) 去重
         \item \textbf{终止}：通过 / 5 轮 / 代码无变化 / 失败签名重复 / 工具故障
         \item 测试用例\textbf{对模型不可见}，仿真基于 CODESYS 官方运行时
+        \item 两道闸门：接口校验零成本，编译约 13 s，仿真约 24 s
       \end{itemize}
     \end{column}
   \end{columns}
 
-  \takeaway{两道闸门：零成本预校验 $\rightarrow$ 编译（约 13 s）$\rightarrow$
-  仿真（约 24 s）；任何一步失败都转成\textbf{结构化反馈}（错误码 + 行列，
-  或失败的用例/步 + 期望值 + 实测值）回到模型。}
 \end{frame}
 
 % ============================================================
@@ -188,14 +176,13 @@
   \begin{itemize}
     \item Codex CLI 包装为与自研相同的 \texttt{chat(messages)} 客户端：
           \textbf{提示、反馈文本、轮次上限、编译测试管线完全一致}
-    \item 差异只在生成组织方式（Codex 自带 agent 循环与工具上下文）
+    \item 差异只在生成组织方式（Codex 自带 agent 循环与工具上下文），
+          因此结果差异只能归因于框架本身
     \item 同一 DMXAPI 网关、同一模型快照、同一 CODESYS 模板与 worker
     \item \textbf{指标}：首次编译、最终编译、测试通过率、token、墙钟时间、轮次
     \item Codex 的工具调用开销计入 token 与耗时——这是“现有框架”的真实成本
   \end{itemize}
 
-  \takeaway{除“生成组织方式”外全部对齐，因此结果差异只能归因于框架本身，
-  而非提示、预算或工具链。}
 \end{frame}
 
 \begin{frame}
@@ -223,9 +210,6 @@
   \statbox{66.7\% vs 33.3\%}{Qwen 下自研\textbf{高出 33 个百分点}}
   \hfill
   \statbox{96.7\% vs 100\%}{首轮编译：自研靠反馈追平最终结果}
-
-  \takeaway{DeepSeek 下框架不改变质量上限，只改变成本；
-  Qwen 下框架改变质量本身——说明存在\textbf{框架 $\times$ 模型交互}。}
 \end{frame}
 
 \begin{frame}
@@ -252,9 +236,6 @@
     \item 差距几乎全在\textbf{输入侧}：Codex 的 agent 循环反复累加系统提示、工具定义与历史
     \item 输出 token 两框架同量级（383k vs 521k），说明“想的量”相当，差的是“看的量”
   \end{itemize}
-
-  \takeaway{自研的价值不是“用更聪明的模型”，而是用\textbf{更短的上下文}
-  拿到同样的结果：弱模型少看无关内容，也就少犯错。}
 \end{frame}
 
 \begin{frame}
@@ -299,13 +280,12 @@
         \item 自研 + Qwen 也只剩 2 题编不过，靠反馈把 28 题送进测试
         \item Codex + Qwen 有 \textbf{14 题最终仍编译失败}：
               首轮编译仅 16.7\%，5 轮预算基本耗在语法上
+        \item 只看编译通过的题，行为通过率为 83.3\% / 83.3\% / 71.4\% / 62.5\%：
+              Qwen 下两框架的差距从 \textbf{33 个百分点收窄到 9 个百分点}，
+              其余差距来自没编译过的题
       \end{itemize}
     \end{column}
   \end{columns}
-
-  \takeaway{框架的差距首先是“有没有把代码编译通”：只看编译通过的题，
-  行为通过率为 83.3\% / 83.3\% / 71.4\% / 62.5\%——Qwen 下两框架的差距
-  从 \textbf{33 个百分点收窄到 9 个百分点}，其余差距来自没编译过的题。}
 \end{frame}
 
 \begin{frame}
@@ -341,13 +321,10 @@
               中型题语法规模更大，错误更早累积
         \item 自研的“块格式 + 接口预校验 + 单轮整体重写”
               更贴合 Qwen 的输出习惯；Codex 的通用 agent 提示反而诱发非 IEC 写法
+        \item 结论：更强的 agent 框架\textbf{并非对任意模型都更好}，框架与模型需要匹配调优
       \end{itemize}
     \end{column}
   \end{columns}
-
-  \takeaway{不能假设“更强的 agent 框架对任意模型都更好”：
-  同一模型换框架，通过率相差 33 个百分点；
-  而 DeepSeek 下换框架质量不变、成本翻 7 倍。\textbf{框架与模型需要匹配调优}。}
 \end{frame}
 
 \begin{frame}
@@ -377,9 +354,6 @@
       因此上表通过率是\textbf{“现有用例下”}的通过率，严格化后可能下降。
     \end{column}
   \end{columns}
-
-  \takeaway{编译反馈已解决“能编译”，剩下的价值在\textbf{更强的行为规约/验证}
-  （PLCVerif）与更严的用例覆盖，而不是继续堆编译轮次。}
 \end{frame}
 
 % ============================================================
@@ -406,8 +380,11 @@
     \end{itemize}
   \end{block}
 
-  \takeaway{把“能不能编译、跑得对不对”做成\textbf{结构化反馈}，
-  弱模型也能被推上来；但框架与模型必须匹配——没有对所有模型都更好的框架。}
+  \vspace{0.3em}
+  \begin{center}\small
+    把“能不能编译、跑得对不对”做成结构化反馈，弱模型也能被推上来；
+    但没有对所有模型都更好的框架。
+  \end{center}
 \end{frame}
 
 \end{document}
