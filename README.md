@@ -77,6 +77,7 @@ python experiments/summarize.py experiments/runs/agent_2models
 ## 实验报告
 
 - [实验报告（含逐题 LTL 规约与四设置结果分析）](report/实验报告.md)
+- [实验报告英文版](report/Report_EN.md)（附录见 [Appendix_EN.md](report/Appendix_EN.md)）
 - [测试用例文档（按作业模板：名称/初始状态/输入与步骤/预期输出/覆盖内容/实际输出/检查内容）](report/测试用例.md)
 - [四设置结果汇总表](experiments/RESULTS_FULL.md)
 - [汇报 slides（5 分钟，含讲稿）](presentation/zh/main.pdf)
