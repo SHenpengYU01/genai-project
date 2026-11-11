@@ -258,7 +258,7 @@
             0/自研+DeepSeek/25/0/5,
             1/自研+Qwen/20/2/8,
             2/Codex+DeepSeek/25/0/5,
-            3/Codex+Qwen/10/14/6}{%
+            3/Codex+Qwen/14/5/11}{%
           \node[anchor=east,font=\scriptsize] at (-0.6,{-\i*0.75-0.4}) {\name};
           \fill[teal!60!black]   (0,{-\i*0.75-0.55}) rectangle (\a,{-\i*0.75-0.25});
           \fill[orange!85!black] (\a,{-\i*0.75-0.55}) rectangle ({\a+\b},{-\i*0.75-0.25});
@@ -277,11 +277,11 @@
       \begin{itemize}
         \item DeepSeek 两种框架\textbf{编译失败均为 0}：
               编译闸门已不是瓶颈，扣分全在行为层
-        \item 自研 + Qwen 也只剩 2 题编不过，靠反馈把 28 题送进测试
-        \item Codex + Qwen 有 \textbf{14 题最终仍编译失败}：
+        \item 自研 + Qwen 只剩 2 题编不过，靠反馈把 28 题送进测试
+        \item Codex + Qwen 有 \textbf{5 题最终仍编译失败}：
               首轮编译 30\%，5 轮预算常耗在语法上
-        \item 只看编译通过的题，行为通过率为 83.3\% / 83.3\% / 71.4\% / 62.5\%：
-              Qwen 下两框架的差距从 \textbf{33 个百分点收窄到 9 个百分点}，
+        \item 只看编译通过的题，行为通过率为 83.3\% / 83.3\% / 71.4\% / 56.0\%：
+              Qwen 下两框架的差距从 \textbf{20 个百分点收窄到 15 个百分点}，
               其余差距来自没编译过的题
       \end{itemize}
     \end{column}
@@ -289,42 +289,55 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{解释二：框架 $\times$ 模型交互，Qwen 对框架敏感}
+  \frametitle{解释二：Qwen 下差距从哪来（三组机制性证据）}
 
   \begin{columns}[T]
-    \begin{column}{0.44\textwidth}
+    \begin{column}{0.45\textwidth}
       \centering
-      \footnotesize
-      \setlength{\tabcolsep}{4pt}
-      \begin{tabular}{@{}lcccc@{}}
+      \scriptsize
+      \setlength{\tabcolsep}{3.5pt}
+      \begin{tabular}{@{}lcc@{}}
         \hline
-        模型 & 自研败 & Codex 败 & 重合 & 自研独有 \\
+        指标（Qwen） & 自研 & Codex \\
         \hline
-        DeepSeek & 5  & 5  & \textbf{4} & 1 \\
-        Qwen     & 10 & 16 & \textbf{9}  & 1 \\
+        首轮进入编译            & \textbf{30/30} & \textbf{21/30} \\
+        \quad 接口预校验拦下    & 0 & 7 \\
+        \quad 块解析拦下        & 0 & 2 \\
+        每轮编译错误条目        & \textbf{1.17} & \textbf{2.66} \\
+        首轮错误数（中位/均值） & 0 / 1.2 & 2 / 3.7 \\
+        首轮编译通过            & 23/30 & 9/30 \\
+        双方都过的题平均轮次    & \textbf{1.38} & \textbf{2.00} \\
         \hline
       \end{tabular}
 
       \vspace{2mm}
-      \raggedright\footnotesize
-      失败题集高度重合：DeepSeek 下两框架只在 1 题上各自不同；
-      Qwen 下自研的 10 题失败有 9 题也在 Codex 的 16 题失败里，
-      Codex 多出的 7 题中 5 题是编译失败。
+      \raggedright\scriptsize
+      21 道至少一方通过的题：双方都过 13、自研独有 7、Codex 独有 1。
+      失败题集高度重合——差距不是“某些题完全不会”，
+      而是\textbf{同等能力下 Codex 要更多轮才收敛}（上限 5 轮）。
     \end{column}
-    \begin{column}{0.53\textwidth}
+    \begin{column}{0.52\textwidth}
+      \scriptsize
       \begin{itemize}
-        \item \textbf{错误码}（Codex+Qwen 累计）：\texttt{C189} 74、
-              \texttt{C9} 68、\texttt{C32} 32（类型转换）、\texttt{C46} 22、
-              \texttt{C7} 20、\texttt{C6} 13
-        \item \textbf{轮次}：14/30 题耗尽 5 轮；首轮编译失败 21/30
-        \item \textbf{难度}：Codex+Qwen 在 medium 仅 5/12 通过——
-              中型题语法规模更大，错误更早累积
-        \item 自研的“块格式 + 接口预校验 + 单轮整体重写”
-              更贴合 Qwen 的输出习惯；Codex 的通用 agent 提示反而诱发非 IEC 写法
-        \item 结论：更强的 agent 框架\textbf{并非对任意模型都更好}，框架与模型需要匹配调优
+        \item \textbf{输出结构不成立}：Codex 侧把 \texttt{REAL}/\texttt{BOOL}
+              当 DUT 名、数组别名写成 \texttt{kind=array}、整段没有 POU 块——
+              9 题的提交根本没走到编译器
+        \item \textbf{错误更像通用语言}：\texttt{C189} 74、\texttt{C9} 68 的样本是
+              \texttt{应该用',' 替换')'}、\texttt{应该用表达式代替 '!'}——
+              把 ST 写成 C/JS 风格（\texttt{!}、\texttt{if(...)}、\texttt{//}）
+        \item \textbf{提示层稀释}：Codex 以通用 agent 身份运行，模型要同时满足
+              “我是编码代理”与“输出严格块格式的单个 FB”；Qwen 指令跟随弱，
+              冲突时滑向通用写法——这正是 DeepSeek 打平、Qwen 拉开的原因
+        \item \textbf{上下文层}：中位输入 token 11,314 vs 1,573（7.2 倍），
+              输出预算被压缩（3,354 vs 6,101）
       \end{itemize}
     \end{column}
   \end{columns}
+
+  \vspace{1mm}
+  \raggedright\scriptsize
+  如实标注：20/30 vs 14/30 的 Fisher 精确检验 $p=0.19$，未达 0.05 显著；
+  结论依据上述机制性证据，而非单一通过率（每题仅采样 1 次）。
 \end{frame}
 
 \begin{frame}
@@ -336,10 +349,11 @@
         \item 状态机题：五工位生产、柔性加工
         \item 定时/边沿题：焊缝去抖、自动门、交通灯
         \item 典型症状：“差一拍”、未覆盖优先级
-        \item 3 题在\textbf{全部 4 个设置下同时失败}
-              （\texttt{public\_hard\_003/004}、\texttt{self\_easy\_003}），
-              另 3 题在 3 个设置下失败——指向用例与规约的判定强度，
-              而非某个模型的能力
+        \item 2 题在\textbf{全部 4 个设置下同时失败}
+              （\texttt{public\_hard\_003}、\texttt{self\_easy\_003}），
+              另 3 题在 3 个设置下失败（\texttt{public\_easy\_005}、
+              \texttt{public\_hard\_004}、\texttt{public\_medium\_003}）——
+              指向用例与规约的判定强度，而非某个模型的能力
       \end{itemize}
     \end{column}
     \begin{column}{0.48\textwidth}
@@ -367,14 +381,16 @@
           参考实现 30/30 通过编译与仿真，形成可复现基线
     \item 自研 harness 在 DeepSeek 下达到与 Codex 相同的测试通过率（83.3\%），
           输入 token 约为其 1/7、耗时约 1/2；在 Qwen 下仍更优（66.7\% vs 46.7\%）
-    \item 差距主要落在编译层与上下文成本，而非“模型想得不够”；
-          剩余失败集中在行为语义
+    \item 差距主要落在\textbf{首轮进入编译的比例}（30/30 vs 21/30）、
+          每轮错误密度（1.17 vs 2.66）与上下文成本，
+          而非“模型想得不够”；剩余失败集中在行为语义
   \end{enumerate}
 
   \vspace{1mm}
   \begin{block}{如实标注的局限}
     \begin{itemize}
-      \item 规约未接入 PLCVerif（选做项，未做）；每题仅采样 1 次，存在方差
+      \item 规约未接入 PLCVerif（选做项，未做）；每题仅采样 1 次，
+            Qwen 下两框架差异 Fisher 精确检验 $p=0.19$，未达显著
       \item 12 个扫描步无断言、34 个布尔输入从未置 TRUE，通过率是“现有用例下”的通过率
       \item 下一步：接入 PLCVerif、补强用例覆盖、多平台验证
     \end{itemize}
