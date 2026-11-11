@@ -296,7 +296,7 @@
     设置 & 输入 tokens & 输出 tokens & 平均耗时 & 相对 Codex \\
     \hline
     自研 + DeepSeek  & 75,058    & 383,312 & 163 s & 输入 \textbf{13\%}、耗时 \textbf{48\%} \\
-    自研 + Qwen      & 131,255   & 503,606 & 295 s & 输入 \textbf{8\%}、耗时 \textbf{68\%} \\
+    自研 + Qwen      & 131,255   & 503,606 & 295 s & 输入 \textbf{9\%}、耗时 \textbf{94\%} \\
     Codex + DeepSeek & 565,110   & 521,147 & 342 s & --- \\
     Codex + Qwen     & 1,404,958 & 394,781 & 315 s & --- \\
     \hline
@@ -306,6 +306,7 @@
   \begin{itemize}
     \item 通过率相同（83.3\%）的前提下，自研输入 token 为 Codex 的 \textbf{1/7}、耗时约 \textbf{1/2}
     \item 差距几乎全在\textbf{输入侧}：Codex 的 agent 循环反复累加系统提示、工具定义与历史
+    \item Qwen 下自研耗时与 Codex 相当（94\%），但通过率高出 20 个百分点
     \item 输出 token 两框架同量级（383k vs 521k），说明“想的量”相当，差的是“看的量”
   \end{itemize}
 \end{frame}
