@@ -12,7 +12,7 @@
 
 \title[GenAI 课程项目报告]{面向 CODESYS 平台的 ST 代码自动生成系统}
 \subtitle{——GenAI 课程大作业}
-\author[姓名]{姓名} % TODO: 原文未给出作者信息，请补全
+\author[汇报人姓名]{沈彭宇\ 张亚彬\ 习博文}
 \institute[浙江大学]{浙江大学}
 \date{\today}
 
@@ -30,34 +30,106 @@
 \end{frame}
 
 % ============================================================
+\begin{frame}
+  \frametitle{目录}
+
+  % \begin{columns}[T]
+  %   \begin{column}{0.40\textwidth}
+  %     \vspace{2mm}
+      {\setbeamertemplate{section in toc}{%
+          \leavevmode\parbox[t]{\linewidth}{%
+            {\color{structure}\bfseries\inserttocsectionnumber.}\hspace{0.5em}%
+            \inserttocsection}\vspace{3.2mm}}%
+        \tableofcontents[hideallsubsections]}
+
+    % \end{column}
+    % \begin{column}{0.56\textwidth}
+    %   \begin{block}{一句话主线}
+    %     \small
+    %     先证明题目本身可做、判定可信，再用 \textbf{2$\times$2} 设置
+    %     对比自研 harness 与现有框架 Codex CLI，最后解释差距从哪来。
+    %   \end{block}
+    %   \begin{alertblock}{要回答的问题}
+    %     \small
+    %     自研框架是否比现有框架更好？好在哪里，代价是什么？
+    %   \end{alertblock}
+    %   \begin{block}{结论先行}
+    %     \small
+    %     DeepSeek 下两框架测试通过率相同（\textbf{83.3\%}）；
+    %     Qwen 下自研 \textbf{66.7\%}、Codex \textbf{46.7\%}，
+    %     而输入 token 仅为 Codex 的 \textbf{13\%} / \textbf{8\%}。
+    %   \end{block}
+    % \end{column}
+  % \end{columns}
+
+\end{frame}
+
+% ============================================================
 \section{问题总览}
 
 \begin{frame}
   \frametitle{问题总览}
 
+  % --- 任务定义：一条输入 → 输出主线 ---
+  \centering
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+      x=1cm, y=1cm,
+      inb/.style={draw=structure!55, fill=structure!8, rounded corners=2pt,
+        align=center, font=\scriptsize, text width=2.5cm,
+        minimum height=1.1cm, inner sep=2pt},
+      gen/.style={draw=structure!80!black, fill=structure!85, text=white,
+        rounded corners=2pt, align=center,
+        font=\scriptsize\bfseries, text width=2.1cm,
+        minimum height=1.1cm, inner sep=2pt},
+      ver/.style={draw=orange!75!black, fill=orange!12, rounded corners=2pt,
+        align=center, font=\scriptsize, text width=2.7cm,
+        minimum height=1.1cm, inner sep=2pt},
+      outb/.style={draw=green!45!black, fill=green!10, rounded corners=2pt,
+        align=center, font=\scriptsize, text width=2.3cm,
+        minimum height=1.1cm, inner sep=2pt},
+      a/.style={-{Latex[length=1.4mm]}, semithick, structure!60},
+      fb/.style={-{Latex[length=1.4mm]}, semithick, red!65!black}]
+    \node[inb]  (in)  at (0,0)    {自然语言需求\\接口表（含 DUT）\\LTL 规约};
+    \node[gen]  (gen) at (3.6,0)  {LLM 生成\\ST 工程};
+    \node[ver]  (ver) at (7.1,0)  {CODESYS 编译\\+ 仿真执行};
+    \node[outb] (out) at (10.9,0) {可编译、\\可运行的\\ST 功能块};
+    \draw[a] (in)  -- (gen);
+    \draw[a] (gen) -- (ver);
+    \draw[a] (ver) -- (out);
+    \draw[fb] (ver.south) -- (7.1,-0.95) -- (3.6,-0.95) -- (gen.south);
+    \node[font=\tiny, text=red!65!black, fill=white, inner sep=1.5pt]
+      at (5.35,-0.95) {结构化反馈：错误码 + 失败用例/步/期望值/实测值};
+  \end{tikzpicture}}
+
+  \vspace{1.4mm}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
-      \begin{block}{目标}
-        输入自然语言需求 + 接口表 + LTL 规约；
-        输出可直接在 CODESYS 编译并运行的 \textbf{ST}
-      \end{block}
       \begin{alertblock}{难点不在“像不像”}
+        \small
         \begin{itemize}
-          \item 语法与工程结构：DUT、Standard 库、调用图
+          \item 语法与工程：DUT、Standard 库、调用图
           \item 行为语义：状态机、定时器、边沿、优先级
           \item 评测可信：必须\textbf{真实执行}
         \end{itemize}
       \end{alertblock}
+      \begin{block}{什么算“做对了”}
+        \small
+        编译通过 \textbf{且} 用例在仿真中逐拍对拍通过；\\
+        用例对模型不可见
+      \end{block}
     \end{column}
-    \begin{column}{0.50\textwidth}
+    \begin{column}{0.48\textwidth}
       \begin{block}{交付}
-        数据与规约（30 题 / 75 条 LTL / 54 组用例）$\cdot$
-        自研 Agent harness $\cdot$ CODESYS 编译 + 仿真服务 $\cdot$
+        \small
+        30 题数据与规约（75 条 LTL / 54 组用例）\\
+        自研 harness $\cdot$ CODESYS 编译 + 仿真服务\\
         统一评测管线
       \end{block}
       \begin{block}{四种设置}
-        \{Codex CLI, 自研\} $\times$ \{DeepSeek, Qwen\}，各 30 题，
-        统一 5 轮修复预算，\texttt{tool\_error} 已清零
+        \small
+        \{Codex CLI, 自研\} $\times$ \{DeepSeek, Qwen\}\\
+        各 30 题，统一 5 轮修复预算，无工具故障
       \end{block}
     \end{column}
   \end{columns}
@@ -68,7 +140,7 @@
 \section{数据与规约}
 
 \begin{frame}
-  \frametitle{数据集与质量基线}
+  \frametitle{数据集}
 
   \begin{columns}[T]
     \begin{column}{0.46\textwidth}
@@ -89,18 +161,21 @@
       \raggedright\scriptsize
       每题包含：\texttt{FUNCTION\_BLOCK} 接口（含 DUT）+
       中英需求 + LTL + 行为用例 + 可编译参考实现
+      \normalsize
+      \begin{itemize}
+        \item \textbf{自建题}：交通灯、水箱、自动门、分拣、主备泵、报警闭锁、
+              星三角、停车场、恒压供水、电梯等 PLC 场景
+      \end{itemize}
     \end{column}
     \begin{column}{0.50\textwidth}
       \begin{itemize}
-        \item \textbf{自建题}：交通灯、水箱、自动门、分拣、主备泵、报警闭锁、
-              星三角、停车场、恒压供水、电梯——均为真实 PLC 场景
         \item \textbf{多样性}：离散制造/流程工业/电机/安全/队列/字符串；
               含 DUT 3 题、\texttt{VAR\_IN\_OUT} 4 题
         \item \textbf{规约}：互斥、响应、保持、范围不变量、错误码
         \item \textbf{用例}：正常流程、边界、优先级冲突、错误处理；
               \textbf{每步写明测试目的}并关联到 LTL 规约
         \item \textbf{自检}：参考实现 \textbf{30/30} 编译且 \textbf{30/30}
-              通过自己的用例（首轮曾暴露 16 处用例缺陷）
+              通过自己的用例
       \end{itemize}
     \end{column}
   \end{columns}
@@ -149,7 +224,6 @@
         \item \textbf{上下文}：仅保留最近 2 轮；错误按 (code, text) 去重
         \item \textbf{终止}：通过 / 5 轮 / 代码无变化 / 失败签名重复 / 工具故障
         \item 测试用例\textbf{对模型不可见}，仿真基于 CODESYS 官方运行时
-        \item 两道闸门：接口校验零成本，编译约 13 s，仿真约 24 s
       \end{itemize}
     \end{column}
   \end{columns}
@@ -160,7 +234,7 @@
 \section{结果与解释}
 
 \begin{frame}
-  \frametitle{实验设置与公平性}
+  \frametitle{实验设置}
 
   \centering
   \begin{tabular}{lcc}
@@ -178,9 +252,7 @@
           \textbf{提示、反馈文本、轮次上限、编译测试管线完全一致}
     \item 差异只在生成组织方式（Codex 自带 agent 循环与工具上下文），
           因此结果差异只能归因于框架本身
-    \item 同一 DMXAPI 网关、同一模型快照、同一 CODESYS 模板与 worker
     \item \textbf{指标}：首次编译、最终编译、测试通过率、token、墙钟时间、轮次
-    \item Codex 的工具调用开销计入 token 与耗时——这是“现有框架”的真实成本
   \end{itemize}
 
 \end{frame}
@@ -242,7 +314,7 @@
   \frametitle{解释一：差距落在编译层，不是行为层}
 
   \begin{columns}[T]
-    \begin{column}{0.53\textwidth}
+    \begin{column}{0.51\textwidth}
       \centering
       \resizebox{\columnwidth}{!}{%
       \begin{tikzpicture}[x=0.19cm,y=1cm]
@@ -273,7 +345,7 @@
         \node[anchor=north west,font=\tiny] at (0,-3.05) {共 30 题，横轴为题目数};
       \end{tikzpicture}}
     \end{column}
-    \begin{column}{0.44\textwidth}
+    \begin{column}{0.49\textwidth}
       \begin{itemize}
         \item DeepSeek 两种框架\textbf{编译失败均为 0}：
               编译闸门已不是瓶颈，扣分全在行为层
@@ -289,13 +361,13 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{解释二：Qwen 下差距从哪来（三组机制性证据）}
+  \frametitle{解释二：Qwen 下差距从哪来}
 
   \begin{columns}[T]
-    \begin{column}{0.45\textwidth}
+    \begin{column}{0.5\textwidth}
       \centering
-      \scriptsize
-      \setlength{\tabcolsep}{3.5pt}
+      % \scriptsize
+      \setlength{\tabcolsep}{4pt}
       \begin{tabular}{@{}lcc@{}}
         \hline
         指标（Qwen） & 自研 & Codex \\
@@ -311,13 +383,12 @@
       \end{tabular}
 
       \vspace{2mm}
-      \raggedright\scriptsize
-      21 道至少一方通过的题：双方都过 13、自研独有 7、Codex 独有 1。
-      失败题集高度重合——差距不是“某些题完全不会”，
-      而是\textbf{同等能力下 Codex 要更多轮才收敛}（上限 5 轮）。
+      \raggedright\small
+      失败题集高度重合——差距在于\textbf{同等能力下 Codex 要更多轮才收敛}（上限 5 轮）。
     \end{column}
-    \begin{column}{0.52\textwidth}
-      \scriptsize
+    \begin{column}{0.5\textwidth}
+      % \scriptsize
+      \small
       \begin{itemize}
         \item \textbf{输出结构不成立}：Codex 侧把 \texttt{REAL}/\texttt{BOOL}
               当 DUT 名、数组别名写成 \texttt{kind=array}、整段没有 POU 块——
@@ -334,41 +405,41 @@
     \end{column}
   \end{columns}
 
-  \vspace{1mm}
-  \raggedright\scriptsize
-  如实标注：20/30 vs 14/30 的 Fisher 精确检验 $p=0.19$，未达 0.05 显著；
-  结论依据上述机制性证据，而非单一通过率（每题仅采样 1 次）。
+  % \vspace{1mm}
+  % \raggedright\scriptsize
+  % 如实标注：20/30 vs 14/30 的 Fisher 精确检验 $p=0.19$，未达 0.05 显著；
+  % 结论依据上述机制性证据，而非单一通过率（每题仅采样 1 次）。
 \end{frame}
 
-\begin{frame}
-  \frametitle{剩余失败在哪里：行为语义，编译反馈管不到}
+% \begin{frame}
+%   \frametitle{剩余失败在哪里：行为语义，编译反馈管不到}
 
-  \begin{columns}[T]
-    \begin{column}{0.48\textwidth}
-      \begin{itemize}
-        \item 状态机题：五工位生产、柔性加工
-        \item 定时/边沿题：焊缝去抖、自动门、交通灯
-        \item 典型症状：“差一拍”、未覆盖优先级
-        \item 2 题在\textbf{全部 4 个设置下同时失败}
-              （\texttt{public\_hard\_003}、\texttt{self\_easy\_003}），
-              另 3 题在 3 个设置下失败（\texttt{public\_easy\_005}、
-              \texttt{public\_hard\_004}、\texttt{public\_medium\_003}）——
-              指向用例与规约的判定强度，而非某个模型的能力
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.48\textwidth}
-      \begin{alertblock}{判定强度的缺口（如实标注）}
-        \begin{itemize}
-          \item 驱动只断言 \texttt{expect} 中的输出：
-                12 个扫描步无断言
-          \item 34 个布尔输入从未置 TRUE，分布在 9 道题
-          \item 规约未接入 PLCVerif；每题仅采样 1 次
-        \end{itemize}
-      \end{alertblock}
-      因此上表通过率是\textbf{“现有用例下”}的通过率，严格化后可能下降。
-    \end{column}
-  \end{columns}
-\end{frame}
+%   \begin{columns}[T]
+%     \begin{column}{0.48\textwidth}
+%       \begin{itemize}
+%         \item 状态机题：五工位生产、柔性加工
+%         \item 定时/边沿题：焊缝去抖、自动门、交通灯
+%         \item 典型症状：“差一拍”、未覆盖优先级
+%         \item 2 题在\textbf{全部 4 个设置下同时失败}
+%               （\texttt{public\_hard\_003}、\texttt{self\_easy\_003}），
+%               另 3 题在 3 个设置下失败（\texttt{public\_easy\_005}、
+%               \texttt{public\_hard\_004}、\texttt{public\_medium\_003}）——
+%               指向用例与规约的判定强度，而非某个模型的能力
+%       \end{itemize}
+%     \end{column}
+%     \begin{column}{0.48\textwidth}
+%       \begin{alertblock}{判定强度的缺口（如实标注）}
+%         \begin{itemize}
+%           \item 驱动只断言 \texttt{expect} 中的输出：
+%                 12 个扫描步无断言
+%           \item 34 个布尔输入从未置 TRUE，分布在 9 道题
+%           \item 规约未接入 PLCVerif；每题仅采样 1 次
+%         \end{itemize}
+%       \end{alertblock}
+%       因此上表通过率是\textbf{“现有用例下”}的通过率，严格化后可能下降。
+%     \end{column}
+%   \end{columns}
+% \end{frame}
 
 % ============================================================
 \section{总结}
@@ -387,7 +458,7 @@
   \end{enumerate}
 
   \vspace{1mm}
-  \begin{block}{如实标注的局限}
+  \begin{block}{局限性}
     \begin{itemize}
       \item 规约未接入 PLCVerif（选做项，未做）；每题仅采样 1 次，
             Qwen 下两框架差异 Fisher 精确检验 $p=0.19$，未达显著
